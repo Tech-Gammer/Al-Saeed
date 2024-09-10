@@ -1,12 +1,9 @@
 import 'dart:io';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:myfirstmainproject/admin/additems.dart';
-import 'package:myfirstmainproject/admin/admin.dart';
 
 import '../components.dart';
 
@@ -20,6 +17,7 @@ class _ItemsPageState extends State<ItemsPage> {
   final FirebaseStorage storage = FirebaseStorage.instance;
   final ImagePicker picker = ImagePicker();
   List<String> categories = [];
+  List<Map<dynamic, dynamic>> _items = [];
   String? selectedCategory;
   TextEditingController categoryController = TextEditingController();
   File? _imageFile;
@@ -31,8 +29,7 @@ class _ItemsPageState extends State<ItemsPage> {
   }
 
   Future<List<Map<String, dynamic>>> fetchItems() async {
-    String adminId = FirebaseAuth.instance.currentUser!.uid;
-    final snapshot = await itemsRef.child(adminId).get();
+    final snapshot = await itemsRef.get();
 
     if (snapshot.exists) {
       Map<dynamic, dynamic> items = snapshot.value as Map<dynamic, dynamic>;
@@ -40,7 +37,8 @@ class _ItemsPageState extends State<ItemsPage> {
         return Map<String, dynamic>.from(item);
       }).toList();
       return itemList;
-    } else {
+    }
+    else {
       return [];
     }
   }
@@ -64,7 +62,7 @@ class _ItemsPageState extends State<ItemsPage> {
         });
       }
     } catch (e) {
-      print('Error fetching categories: $e');
+      // print('Error fetching categories: $e');
     }
   }
 
@@ -78,21 +76,32 @@ class _ItemsPageState extends State<ItemsPage> {
     }
   }
 
-  Future<String?> _uploadImage(File imageFile) async {
+  Future<String?> _uploadImage(File imageFile, String? existingImageUrl) async {
     try {
-      String adminId = FirebaseAuth.instance.currentUser!.uid;
-      String fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
-      Reference storageRef = storage.ref().child('images/$adminId/$fileName');
+      String fileName;
+
+      // Use the existing image file name if it exists
+      if (existingImageUrl != null) {
+        Uri uri = Uri.parse(existingImageUrl);
+        fileName = uri.pathSegments.last;
+      } else {
+        // Otherwise, create a new file name
+        fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+      }
+
+      Reference storageRef = storage.ref().child('$fileName');
 
       final uploadTask = storageRef.putFile(imageFile);
       final snapshot = await uploadTask.whenComplete(() {});
       final imageUrl = await snapshot.ref.getDownloadURL();
       return imageUrl;
     } catch (e) {
-      print('Error uploading image: $e');
+      // print('Error uploading image: $e');
       return null;
     }
   }
+
+
 
   void _showItemDetailsDialog(Map<String, dynamic> item) {
     final TextEditingController nameController = TextEditingController(text: item['item_name'] ?? '');
@@ -107,11 +116,11 @@ class _ItemsPageState extends State<ItemsPage> {
         return AlertDialog(
           title: Row(
             children: [
-              Text("Item Details"),
-              Spacer(),
+              const Text("Item Details"),
+              const Spacer(),
               IconButton(onPressed: (){
                 Navigator.pop(context);
-              }, icon: Icon(Icons.close))
+              }, icon: const Icon(Icons.close))
             ],
           ),
           content: SingleChildScrollView(
@@ -129,21 +138,21 @@ class _ItemsPageState extends State<ItemsPage> {
                               : null,
                         backgroundColor: Colors.grey[200],
                         child: _imageFile == null && imageUrl == null
-                            ? Icon(Icons.image, color: Colors.grey)
+                            ? const Icon(Icons.image, color: Colors.grey)
                             : null,
                       ),
                       Positioned(
                         bottom: -5,
                         right: -5,
                         child: IconButton(
-                          icon: Icon(Icons.camera_alt, color: Colors.blue, size: 30),
+                          icon: const Icon(Icons.camera_alt, color: Colors.blue, size: 30),
                           onPressed: _pickImage,
                         ),
                       ),
                     ],
                   ),
               ),
-                SizedBox(height: 20),
+                const SizedBox(height: 20),
                 _buildTextField(nameController, "Item Name"),
                 _buildTextField(priceController, "Price", keyboardType: TextInputType.number),
                 _buildCategoryDropdown(currentCategory),
@@ -156,7 +165,7 @@ class _ItemsPageState extends State<ItemsPage> {
               child: Container(
                 width: 200,
                 height: 50,
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: Color(0xFFE0A45E),
                   borderRadius: BorderRadius.all(Radius.circular(20))
                 ),
@@ -168,7 +177,7 @@ class _ItemsPageState extends State<ItemsPage> {
                     if (itemId.isNotEmpty) {
                       String? newImageUrl;
                       if (_imageFile != null) {
-                        newImageUrl = await _uploadImage(_imageFile!);
+                        newImageUrl = await _uploadImage(_imageFile!, imageUrl);
                       } else {
                         newImageUrl = imageUrl; // Keep the old image URL if no new image is selected
                       }
@@ -182,10 +191,11 @@ class _ItemsPageState extends State<ItemsPage> {
                       });
                       Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ItemsPage()));
                     } else {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Invalid item ID")));
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Invalid item ID")));
                     }
                   },
-                  child: Text("Update Item",style: NewCustomTextStyles.newcustomTextStyle),
+
+                  child: const Text("Update Item",style: NewCustomTextStyles.newcustomTextStyle),
                 ),
               ),
             ),
@@ -197,38 +207,36 @@ class _ItemsPageState extends State<ItemsPage> {
 
   Future<void> _updateItem(String itemId, Map<String, dynamic> updatedData) async {
     try {
-      String adminId = FirebaseAuth.instance.currentUser!.uid;
-      final itemRef = itemsRef.child(adminId).child(itemId);
+      // String adminId = FirebaseAuth.instance.currentUser!.uid;
+      final itemRef = itemsRef.child(itemId);
 
-      print("Updating item at path: ${itemRef.path}");
-      print("Update data: $updatedData");
+      // print("Updating item at path: ${itemRef.path}");
+      // print("Update data: $updatedData");
 
       await itemRef.update(updatedData);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Item updated successfully")));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Item updated successfully")));
     } catch (e) {
-      print('Error updating item: $e');
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error updating item")));
+      // print('Error updating item: $e');
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Error updating item")));
     }
   }
 
-  Future<void> _deleteItem(String itemId, String? imageUrl) async {
+  Future<void> deleteItem(String itemId, String imageUrl) async {
     try {
-      String adminId = FirebaseAuth.instance.currentUser!.uid;
+      await itemsRef.child(itemId).remove();
+      final storageRef = FirebaseStorage.instance.refFromURL(imageUrl);
+      await storageRef.delete();
 
-      // Delete the item from the database
-      final itemRef = itemsRef.child(adminId).child(itemId);
-      await itemRef.remove();
-
-      // Delete the image from storage if it exists
-      if (imageUrl != null && imageUrl.isNotEmpty) {
-        final imageRef = FirebaseStorage.instance.refFromURL(imageUrl);
-        await imageRef.delete();
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Item deleted successfully")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Item and image deleted successfully")),
+      );
+      setState(() {
+        _items.removeWhere((item) => item['itemId'] == itemId);
+      });
     } catch (e) {
-      print('Error deleting item: $e');
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error deleting item")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error deleting item: $e")),
+      );
     }
   }
 
@@ -239,7 +247,7 @@ class _ItemsPageState extends State<ItemsPage> {
         controller: controller,
         decoration: InputDecoration(
             labelText: labelText,
-            border: OutlineInputBorder(
+            border: const OutlineInputBorder(
               borderSide: BorderSide(
                 color: Colors.grey,
                 width: 5
@@ -257,7 +265,7 @@ class _ItemsPageState extends State<ItemsPage> {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: DropdownButtonFormField<String>(
         value: selectedCategory ?? currentCategory,
-        decoration: InputDecoration(
+        decoration: const InputDecoration(
             labelText: "Category",
             border: OutlineInputBorder(
                 borderSide: BorderSide(
@@ -289,11 +297,11 @@ class _ItemsPageState extends State<ItemsPage> {
         future: fetchItems(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator());
           } else if (snapshot.hasError) {
             return Center(child: Text("Error: ${snapshot.error}"));
           } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(child: Text("No items found"));
+            return const Center(child: Text("No items found"));
           } else {
             final items = snapshot.data!;
             return ListView.builder(
@@ -303,27 +311,27 @@ class _ItemsPageState extends State<ItemsPage> {
                 return Card(
                   elevation: 5,
                   shadowColor: Colors.blue,
-                  margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                  margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                   child: ListTile(
-                    contentPadding: EdgeInsets.all(16),
+                    contentPadding: const EdgeInsets.all(16),
                     leading: CircleAvatar(
                       radius: 30,
                       backgroundImage: item['image'] != null
                           ? NetworkImage(item['image'])
                           : null,
                       backgroundColor: Colors.grey[200],
-                      child: item['image'] == null ? Icon(Icons.image, color: Colors.grey) : null,
+                      child: item['image'] == null ? const Icon(Icons.image, color: Colors.grey) : null,
                     ),
                     title: Text("Name: ${item['item_name']}",
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text("Description: ${item['description']}"),
-                        SizedBox(height: 4),
+                        const SizedBox(height: 4),
                         Text("Rate: ${item['rate']}"),
-                        SizedBox(height: 4),
+                        const SizedBox(height: 4),
                         Text("Category: ${item['category']}"),
                       ],
                     ),
@@ -334,16 +342,16 @@ class _ItemsPageState extends State<ItemsPage> {
                           context: context,
                           builder: (context) {
                             return AlertDialog(
-                              title: Text("Confirm Deletion"),
-                              content: Text("Are you sure you want to delete this item?"),
+                              title: const Text("Confirm Deletion"),
+                              content: const Text("Are you sure you want to delete this item?"),
                               actions: [
                                 TextButton(
                                   onPressed: () => Navigator.pop(context, true),
-                                  child: Text("DELETE"),
+                                  child: const Text("DELETE"),
                                 ),
                                 TextButton(
                                   onPressed: () => Navigator.pop(context, false),
-                                  child: Text("CANCEL"),
+                                  child: const Text("CANCEL"),
                                 ),
                               ],
                             );
@@ -352,14 +360,14 @@ class _ItemsPageState extends State<ItemsPage> {
                         if (confirm) {
                           final itemId = item['itemId'] as String? ?? '';
                           if (itemId.isNotEmpty) {
-                            await _deleteItem(itemId, item['image']);
+                            await deleteItem(itemId, item['image']);
                             setState(() {}); // Refresh the list
                           } else {
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Invalid item ID")));
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Invalid item ID")));
                           }
                         }
                       },
-                      icon: Icon(
+                      icon: const Icon(
                         Icons.delete,
                         color: Colors.red,
                         size: 25,
@@ -373,10 +381,10 @@ class _ItemsPageState extends State<ItemsPage> {
         },
       ),
         floatingActionButton:  FloatingActionButton(
-            child: Icon(Icons.add,color: Colors.white,),
-            backgroundColor: Color(0xFFE0A45E),
+            child: const Icon(Icons.add,color: Colors.white,),
+            backgroundColor: const Color(0xFFE0A45E),
             onPressed: (){
-              Navigator.push(context, MaterialPageRoute(builder: (context)=>AddItems()));
+              Navigator.push(context, MaterialPageRoute(builder: (context)=>const AddItems()));
             }
         )
     );

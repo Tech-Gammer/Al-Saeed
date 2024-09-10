@@ -38,12 +38,14 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage> {
           orders = allOrders.where((order) {
             final userId = order['userId'] as String?;
             final adminId = order['adminId'] as String?;
-            return userId == currentUser.uid || adminId == currentUser.uid;
+            final riderId = order['riderId'] as String?;
+            return userId == currentUser.uid || adminId == currentUser.uid || riderId == currentUser.uid;
           }).toList();
 
           orders.sort((a, b) {
             final timestampA = a['timestamp'] as String?;
             final timestampB = b['timestamp'] as String?;
+
             final dateTimeA = DateTime.tryParse(timestampA ?? '') ?? DateTime(1970);
             final dateTimeB = DateTime.tryParse(timestampB ?? '') ?? DateTime(1970);
             return dateTimeB.compareTo(dateTimeA); // Newest first
@@ -58,11 +60,15 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage> {
   Color getStatusColor(String status) {
     switch (status) {
       case 'Pending':
-        return Colors.orange;
+        return Colors.grey;
       case 'Processing':
-        return Colors.blue;
+        return Colors.amber;
       case 'Shipped':
         return Colors.purple;
+      case 'PickedUp':
+        return Colors.blue;
+      case 'In Transit':
+        return Colors.orange;
       case 'Delivered':
         return Colors.green;
       case 'Cancelled':
@@ -78,14 +84,14 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Request Cancellation'),
+          title: const Text('Request Cancellation'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Please provide a reason for cancellation:'),
+              const Text('Please provide a reason for cancellation:'),
               TextField(
                 controller: reasonController,
-                decoration: InputDecoration(hintText: 'Enter reason here'),
+                decoration: const InputDecoration(hintText: 'Enter reason here'),
                 maxLines: 3,
               ),
             ],
@@ -95,14 +101,14 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage> {
               onPressed: () {
                 Navigator.pop(context); // Close the dialog
               },
-              child: Text('Cancel'),
+              child: const Text('Cancel'),
             ),
             ElevatedButton(
               onPressed: () async {
                 final reason = reasonController.text.trim();
                 if (reason.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Reason is required')),
+                    const SnackBar(content: Text('Reason is required')),
                   );
                 } else {
                   Navigator.pop(context); // Close the dialog
@@ -112,7 +118,7 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage> {
               style: ElevatedButton.styleFrom(
                 foregroundColor: Colors.white, backgroundColor: Colors.red,
               ),
-              child: Text('Submit Request'),
+              child: const Text('Submit Request'),
             ),
           ],
         );
@@ -142,17 +148,17 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage> {
     } catch (e) {
       print('Error requesting order cancellation: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to request cancellation. Please try again later.')),
+        const SnackBar(content: Text('Failed to request cancellation. Please try again later.')),
       );
     }
   }
 
   Widget buildOrderItemCard(Map<String, dynamic> item) {
     return Card(
-      margin: EdgeInsets.symmetric(vertical: 4.0),
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
       elevation: 2,
       child: ListTile(
-        contentPadding: EdgeInsets.all(8.0),
+        contentPadding: const EdgeInsets.all(8.0),
         leading: item['imageUrl'] != null
             ? Image.network(
           item['imageUrl'],
@@ -176,16 +182,14 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage> {
 
   void _showOrderDetails(Map<String, dynamic> order) {
     final hasCancellationRequest = order.containsKey('cancellationRequest') && order['cancellationRequest'] != null;
+    final orderStatus = order['status'] as String? ?? 'Pending';
 
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
           backgroundColor: Colors.brown[50],
-          title: Text(
-            "Order ID: ${order['orderId']}",
-            style: GoogleFonts.lora(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.brown[800]),
-          ),
+          title: Text("Order Details:",style: GoogleFonts.lora(fontSize: 22, fontWeight: FontWeight.bold)),
           content: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -198,9 +202,9 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage> {
                     "Cancellation Request Status: ${order['cancellationRequest']['status']}",
                     style: GoogleFonts.lora(fontSize: 16, color: Colors.red),
                   ),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 Text("Cart Items:", style: GoogleFonts.lora(fontWeight: FontWeight.bold)),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 ...Map<String, dynamic>.from(order['items'] ?? {}).entries.map((entry) {
                   final item = entry.value;
                   return buildOrderItemCard(Map<String, dynamic>.from(item));
@@ -209,7 +213,7 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage> {
             ),
           ),
           actions: [
-            if (order['status'] != 'Cancelled') // Add cancel button only if order is not already cancelled
+            if (['Pending', 'Processing'].contains(orderStatus) && !hasCancellationRequest) // Add cancel button only if order is in the correct status and no cancellation request exists
               ElevatedButton(
                 onPressed: () {
                   Navigator.pop(context); // Close the dialog before showing the cancellation reason dialog
@@ -221,7 +225,7 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  padding: EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
                 ),
                 child: Text('Request Cancellation', style: GoogleFonts.lora(fontSize: 16)),
               ),
@@ -231,7 +235,7 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage> {
                 width: 100,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(20),
-                  color: Color(0xFFe6b67e),
+                  color: const Color(0xFFe6b67e),
                 ),
                 child: TextButton(
                   onPressed: () {
@@ -251,14 +255,14 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('My Orders', style: NewCustomTextStyles.newcustomTextStyle),
-        backgroundColor: Color(0xFFe6b67e),
+        title: const Text('My Orders', style: NewCustomTextStyles.newcustomTextStyle),
+        backgroundColor: const Color(0xFFe6b67e),
         centerTitle: true,
         automaticallyImplyLeading: !widget.comingFromCheckoutPage,
         leading: widget.comingFromCheckoutPage
             ? null
             : IconButton(
-          icon: Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () {
             Navigator.pop(context); // Go back to previous screen
           },
@@ -274,22 +278,23 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage> {
               ? (order['total'] as int).toDouble()
               : order['total'] as double? ?? 0.0;
           final status = order['status'] as String? ?? 'Pending';
+          final payment_status = order['payment_status'] as String? ?? 'Pending';
+
           final timestamp = order['timestamp'] as String? ?? '';
           final hasCancellationRequest = order.containsKey('cancellationRequest') && order['cancellationRequest'] != null;
 
           return Card(
-            margin: EdgeInsets.all(10.0),
+            margin: const EdgeInsets.all(10.0),
             child: ListTile(
-              title: Text(
-                'Order ID: $orderId',
-                style: GoogleFonts.lora(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
+              title: Text("Order",style: GoogleFonts.lora(fontSize: 22, fontWeight: FontWeight.bold)),
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Total: Rs. ${total.toStringAsFixed(2)}', style: GoogleFonts.lora(fontSize: 16)),
                   Text('Status: $status', style: GoogleFonts.lora(fontSize: 16, color: getStatusColor(status))),
                   Text('Date: $timestamp', style: GoogleFonts.lora(fontSize: 16)),
+                  Text('Payment Status: $payment_status', style: GoogleFonts.lora(fontSize: 16, color: Colors.green)),
+
                   if (hasCancellationRequest)
                     Text(
                       'Cancellation Request Sent',
@@ -309,18 +314,18 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage> {
           );
         },
       )
-          : Center(child: Text("No Orders Found")),
+          : const Center(child: Text("No Orders Found")),
       floatingActionButton: widget.comingFromCheckoutPage
           ? FloatingActionButton(
         onPressed: () {
           Navigator.pushAndRemoveUntil(
             context,
-            MaterialPageRoute(builder: (context) => FrontPage()),
+            MaterialPageRoute(builder: (context) => const FrontPage()),
                 (Route<dynamic> route) => false,
           );
         },
-        backgroundColor: Color(0xFFe6b67e),
-        child: Icon(Icons.home_sharp, color: Colors.white),
+        backgroundColor: const Color(0xFFe6b67e),
+        child: const Icon(Icons.home_sharp, color: Colors.white),
         tooltip: 'Go to Front Page',
       )
           : null,

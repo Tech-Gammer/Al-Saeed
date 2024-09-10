@@ -33,7 +33,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("User authenticated")),
+        const SnackBar(content: Text("User authenticated")),
       );
 
       // Reference to the users and admin nodes
@@ -84,16 +84,16 @@ class _RegisterPageState extends State<RegisterPage> {
 
         // Show verification email sent message
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Verification email sent. Please check your email.")),
+          const SnackBar(content: Text("Verification email sent. Please check your email.")),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("User not found for sending verification email.")),
+          const SnackBar(content: Text("User not found for sending verification email.")),
         );
       }
 
       // Navigate to the LoginPage
-      Navigator.push(context, MaterialPageRoute(builder: (context) => LoginPage()));
+      Navigator.push(context, MaterialPageRoute(builder: (context) => const LoginPage()));
 
     } catch (error) {
       // Handle errors
@@ -110,13 +110,13 @@ class _RegisterPageState extends State<RegisterPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
+            SizedBox(
               width: 150,
               height: 150,
               child: Image.asset("images/logomain.png"),
             ),
             Center(
-              child: Container(
+              child: SizedBox(
                 width: 300,
                 child: Column(
                   children: [
@@ -124,7 +124,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       padding: const EdgeInsets.all(8.0),
                       child: TextField(
                         controller: nc,
-                        decoration: InputDecoration(
+                        decoration: const InputDecoration(
                           hintText: "Enter Your Name",
                           labelText: "Name",
                           border: OutlineInputBorder(
@@ -137,7 +137,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       padding: const EdgeInsets.all(8.0),
                       child: TextField(
                         controller: ec,
-                        decoration: InputDecoration(
+                        decoration: const InputDecoration(
                           hintText: "Enter Your Email Address",
                           labelText: "Email",
                           border: OutlineInputBorder(
@@ -150,7 +150,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       padding: const EdgeInsets.all(8.0),
                       child: TextField(
                         controller: phonec,
-                        decoration: InputDecoration(
+                        decoration: const InputDecoration(
                           hintText: "Enter Your Phone No",
                           labelText: "Phone No",
                           border: OutlineInputBorder(
@@ -163,7 +163,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       padding: const EdgeInsets.all(8.0),
                       child: TextField(
                         controller: pass,
-                        decoration: InputDecoration(
+                        decoration: const InputDecoration(
                           hintText: "Enter Your Password",
                           labelText: "Password",
                           border: OutlineInputBorder(
@@ -173,7 +173,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         obscureText: true,
                       ),
                     ),
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
                     Card(
                       color: Colors.black,
                       child: InkWell(
@@ -183,13 +183,13 @@ class _RegisterPageState extends State<RegisterPage> {
                         child: Container(
                           width: 200.0,
                           height: 50.0,
-                          decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.all(Radius.circular(20))),
-                          child: Center(child: Text("Register", style: TextStyle(fontSize: 25, color: Colors.white, fontWeight: FontWeight.bold))),
+                          decoration: const BoxDecoration(color: Colors.black, borderRadius: BorderRadius.all(Radius.circular(20))),
+                          child: const Center(child: Text("Register", style: TextStyle(fontSize: 25, color: Colors.white, fontWeight: FontWeight.bold))),
                         ),
                       ),
                     ),
-                    SizedBox(height: 10),
-                    Row(
+                    const SizedBox(height: 10),
+                    const Row(
                       children: [
                         Text("If you are already registered, please click on"),
                       ],
@@ -199,9 +199,9 @@ class _RegisterPageState extends State<RegisterPage> {
                       children: [
                         TextButton(
                           onPressed: () {
-                            Navigator.push(context, MaterialPageRoute(builder: (context) => LoginPage()));
+                            Navigator.push(context, MaterialPageRoute(builder: (context) => const LoginPage()));
                           },
-                          child: Text("Login"),
+                          child: const Text("Login"),
                         ),
                       ],
                     ),

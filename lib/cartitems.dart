@@ -2,9 +2,9 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:myfirstmainproject/homepage.dart';
 import 'package:myfirstmainproject/userprofile.dart';
 import 'checkoutpage.dart';
-import 'components.dart';
 
 class CartPage extends StatefulWidget {
   @override
@@ -15,40 +15,56 @@ class _CartPageState extends State<CartPage> {
   final DatabaseReference _cartRef = FirebaseDatabase.instance.ref("cart");
   final DatabaseReference _userRef = FirebaseDatabase.instance.ref("users");
   final DatabaseReference _adminRef = FirebaseDatabase.instance.ref("admin");
+  final DatabaseReference _riderRef = FirebaseDatabase.instance.ref("riders");
   late User currentUser;
   Map<String, dynamic>? cartItems;
-  bool isAdmin = false;
+
+
+  String userRole = '';
 
   @override
   void initState() {
     super.initState();
     currentUser = FirebaseAuth.instance.currentUser!;
-    checkIfAdminAndFetchCartItems();
+    checkUserRoleAndFetchCartItems();
   }
 
-  Future<void> checkIfAdminAndFetchCartItems() async {
+  Future<void> checkUserRoleAndFetchCartItems() async {
     try {
       final adminSnapshot = await _adminRef.child(currentUser.uid).once();
       final userSnapshot = await _userRef.child(currentUser.uid).once();
+      final riderSnapshot = await _riderRef.child(currentUser.uid).once();
 
       if (adminSnapshot.snapshot.value != null) {
         setState(() {
-          isAdmin = true;
+          userRole = 'admin';
+        });
+      } else if (riderSnapshot.snapshot.value != null) {
+        setState(() {
+          userRole = 'riders';
+        });
+      } else {
+        setState(() {
+          userRole = 'users';
         });
       }
 
-      // Fetch cart items after determining if user is an admin
+      // Fetch cart items after determining user role
       fetchCartItems();
     } catch (e) {
-      print('Error checking admin status: $e');
+      print('Error checking user role: $e');
     }
   }
 
   Future<void> fetchCartItems() async {
     try {
-      final userCartRef = _cartRef.child(currentUser.uid);
-      final snapshot = await userCartRef.once();
-      if (snapshot.snapshot.value != null) {
+      // final userCartRef = _cartRef; // Fetch cart for the current user
+      // final snapshot = await userCartRef.orderByChild('uid').equalTo(currentUser.uid).once();
+      String userId = currentUser!.uid;
+      final userCartRef = _cartRef.child(userId); // Reference to the current user's cart
+      final snapshot = await userCartRef.once(); // Get all cart items for the user
+
+      if (snapshot.snapshot.exists) {
         setState(() {
           cartItems = Map<String, dynamic>.from(snapshot.snapshot.value as Map);
         });
@@ -64,18 +80,34 @@ class _CartPageState extends State<CartPage> {
 
   Future<void> deleteCartItem(String itemId) async {
     if (currentUser != null) {
-      String adminId = currentUser.uid;
-      DatabaseReference userCartRef = _cartRef.child(adminId).child(itemId);
+      Query cartQuery = _cartRef.orderByChild('itemId').equalTo(itemId);
 
       try {
-        await userCartRef.remove();
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Item removed from cart!")));
+        DatabaseEvent event = await cartQuery.once();
+        DataSnapshot snapshot = event.snapshot;
 
-        setState(() {
-          cartItems!.remove(itemId); // Refresh UI
-        });
+        if (snapshot.exists) {
+          Map<dynamic, dynamic> items = snapshot.value as Map<dynamic, dynamic>;
+          for (var key in items.keys) {
+            await _cartRef.child(key).remove();
+          }
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Item removed from cart!")),
+          );
+
+          // Refresh cart items
+          await fetchCartItems();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Item not found in cart.")),
+          );
+        }
       } catch (error) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $error")));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error: $error")),
+        );
+        print(error);
       }
     }
   }
@@ -93,7 +125,15 @@ class _CartPageState extends State<CartPage> {
   }
 
   Future<bool> isProfileComplete() async {
-    DatabaseReference profileRef = isAdmin ? _adminRef.child(currentUser.uid) : _userRef.child(currentUser.uid);
+    DatabaseReference profileRef;
+    if (userRole == 'admin') {
+      profileRef = _adminRef.child(currentUser.uid);
+    } else if (userRole == 'riders') {
+      profileRef = _riderRef.child(currentUser.uid);
+    } else {
+      profileRef = _userRef.child(currentUser.uid);
+    }
+
     final snapshot = await profileRef.once();
     if (snapshot.snapshot.value != null) {
       final profileData = Map<String, dynamic>.from(snapshot.snapshot.value as Map);
@@ -124,7 +164,7 @@ class _CartPageState extends State<CartPage> {
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text("Please complete your profile before proceeding to checkout."),
         ),
       );
@@ -140,7 +180,18 @@ class _CartPageState extends State<CartPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustomAppBar.customAppBar("Cart Items"),
+      appBar: AppBar(
+        title: Text("Cart Items",style: GoogleFonts.lora(color: Colors.white,fontSize: 25,fontWeight: FontWeight.bold,),),
+        centerTitle: true,
+        backgroundColor:const Color(0xFFe6b67e),
+        automaticallyImplyLeading: false,
+        leading: IconButton(onPressed: () {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const FrontPage()),
+                (Route<dynamic> route) => false,
+          );  }, icon: const Icon(Icons.arrow_back),),
+      ),
       body: cartItems != null
           ? cartItems!.isEmpty
           ? Center(
@@ -156,7 +207,8 @@ class _CartPageState extends State<CartPage> {
               itemCount: cartItems!.length,
               itemBuilder: (context, index) {
                 final item = cartItems!.values.elementAt(index);
-                final itemId = cartItems!.keys.elementAt(index);
+                final cartId = cartItems!.keys.elementAt(index);
+                final itemId = item['itemId'];
                 final quantity = item['quantity'];
                 final name = item['name'] as String? ?? 'No Name';
                 final imageUrl = item['imageUrl'] as String? ?? '';
@@ -164,8 +216,11 @@ class _CartPageState extends State<CartPage> {
                 final rate = item['rate'] as String? ?? 'No Rate';
                 final description = item['description'] as String? ?? 'No description';
 
+
+
                 return ListTile(
                   leading: CircleAvatar(
+                    radius: 30,
                     backgroundImage: NetworkImage(imageUrl),
                   ),
                   title: Text("Name: $name", style: GoogleFonts.lora(fontSize: 18,fontWeight: FontWeight.bold)),
@@ -175,11 +230,12 @@ class _CartPageState extends State<CartPage> {
                       Text("Category: $category", style: GoogleFonts.lora(fontSize: 14)),
                       Text("Rate: $rate", style: GoogleFonts.lora(fontSize: 14)),
                       Text("Quantity: $quantity", style: GoogleFonts.lora(fontSize: 14)),
-                      Text("Description: $description", style: GoogleFonts.lora(fontSize: 14)),
+                      // Text("Description: $description", style: GoogleFonts.lora(fontSize: 14)),
+                      // Text("itemId: $itemId", style: GoogleFonts.lora(fontSize: 14)),
                     ],
                   ),
                   trailing: IconButton(
-                    icon: Icon(Icons.delete, color: Colors.red),
+                    icon: const Icon(Icons.delete, color: Colors.red),
                     onPressed: () => deleteCartItem(itemId),
                   ),
                 );
@@ -192,23 +248,37 @@ class _CartPageState extends State<CartPage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Card(
-                  color: Color(0xFFe6b67e),
+                  color: const Color(0xFFe6b67e),
                   child: InkWell(
                     child: Container(
                       width: 150.0,
                       height: 40.0,
-                      decoration: BoxDecoration(
+                      decoration: const BoxDecoration(
                         color: Color(0xFFe6b67e),
                         borderRadius: BorderRadius.all(Radius.circular(20)),
                       ),
-                      child: Center(
-                        child: Text(
-                          "TOTAL BALANCE",
-                          style: TextStyle(
-                            fontSize: 15,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      child: const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              "TOTAL BALANCE",
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              "Without Delivery Charges",
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+
+                          ],
                         ),
                       ),
                     ),
@@ -224,17 +294,17 @@ class _CartPageState extends State<CartPage> {
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Card(
-              color: Color(0xFFe6b67e),
+              color: const Color(0xFFe6b67e),
               child: InkWell(
                 onTap: checkAndProceedToCheckout,
                 child: Container(
                   width: double.infinity,
                   height: 50.0,
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: Color(0xFFe6b67e),
                     borderRadius: BorderRadius.all(Radius.circular(20)),
                   ),
-                  child: Center(
+                  child: const Center(
                     child: Text(
                       "Proceed to Checkout",
                       style: TextStyle(
@@ -250,7 +320,7 @@ class _CartPageState extends State<CartPage> {
           ),
         ],
       )
-          : Center(child: CircularProgressIndicator()),
+          : const Center(child: CircularProgressIndicator()),
     );
   }
 }

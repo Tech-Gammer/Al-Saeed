@@ -1,16 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:myfirstmainproject/admin/addcategory.dart';
-import 'package:myfirstmainproject/admin/additems.dart';
-import 'package:myfirstmainproject/admin/addslider.dart';
 import 'package:myfirstmainproject/admin/drawer.dart';
 import 'package:myfirstmainproject/admin/itemslistpage.dart';
+import 'package:myfirstmainproject/admin/reportpage.dart';
 import 'package:myfirstmainproject/admin/showcategory.dart';
-import 'package:myfirstmainproject/admin/showslider.dart';
-import 'package:myfirstmainproject/admin/superadminpanel.dart';
-import '../homepage.dart';
 import 'loginpage.dart';
 import 'ordermanagement.dart';
 
@@ -26,6 +20,7 @@ class _AdminState extends State<Admin> {
   List<String> categories = [];
   List<String> items = [];
   int totalOrders = 0;
+  int deliveredOrders = 0;
   String userRole = 'Loading...';
 
   @override
@@ -55,7 +50,7 @@ class _AdminState extends State<Admin> {
         });
       }
     } catch (e) {
-      print('Error fetching categories: $e');
+      // print('Error fetching categories: $e');
     }
   }
 
@@ -71,14 +66,14 @@ class _AdminState extends State<Admin> {
       }
 
       // Reference to the user's items
-      final itemsRef = FirebaseDatabase.instance.ref("items/$userId");
+      final itemsRef = FirebaseDatabase.instance.ref("items");
 
       // Fetch items for the current user
       final snapshot = await itemsRef.once();
 
       if (snapshot.snapshot.value != null) {
         final data = Map<String, dynamic>.from(snapshot.snapshot.value as Map);
-        print('Fetched items data: $data'); // Debugging line
+        // print('Fetched items data: $data'); // Debugging line
 
         // Extract item names from the data
         List<String> fetchedItems = data.values
@@ -94,7 +89,7 @@ class _AdminState extends State<Admin> {
         });
       }
     } catch (e) {
-      print('Error fetching items: $e');
+      // print('Error fetching items: $e');
       setState(() {
         items = [];
       });
@@ -117,7 +112,7 @@ class _AdminState extends State<Admin> {
         });
       }
     } catch (e) {
-      print('Error fetching orders: $e');
+      // print('Error fetching orders: $e');
     }
   }
 
@@ -151,17 +146,36 @@ class _AdminState extends State<Admin> {
         });
       }
     } catch (e) {
-      print('Error fetching user role: $e');
+      // print('Error fetching user role: $e');
       setState(() {
         userRole = 'Error';
       });
     }
   }
 
+  Future<List<Map<String, dynamic>>> fetchDeliveredOrders() async {
+    final List<Map<String, dynamic>> deliveredOrders = [];
+    final DatabaseReference ordersRef = FirebaseDatabase.instance.ref('orders');
+
+    try {
+      final snapshot = await ordersRef.orderByChild('orderStatus').equalTo('delivered').get();
+      if (snapshot.exists) {
+        final orders = snapshot.value as Map<dynamic, dynamic>;
+        for (var orderId in orders.keys) {
+          final orderData = orders[orderId] as Map<dynamic, dynamic>;
+          deliveredOrders.add(orderData.cast<String, dynamic>());
+        }
+      }
+    } catch (e) {
+      // print('Error fetching delivered orders: $e');
+    }
+
+    return deliveredOrders;
+  }
 
   Future<void> logout() async {
     await FirebaseAuth.instance.signOut();
-    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => LoginPage()));
+    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const LoginPage()));
   }
 
   @override
@@ -169,7 +183,7 @@ class _AdminState extends State<Admin> {
     return SafeArea(
       child: Scaffold(
         key: _globalKey,
-        drawer: DrawerContent(),
+        drawer: const DrawerContent(),
         appBar: AppBar(
           title: SizedBox(
               width: 100,
@@ -189,7 +203,7 @@ class _AdminState extends State<Admin> {
                     icon: Icons.category,
                     count: categories.length.toString(),
                     onTap: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => ShowCategory()));
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => const ShowCategory()));
                     },
                   ),
                   DashboardCard(
@@ -206,6 +220,16 @@ class _AdminState extends State<Admin> {
                     count: items.length.toString(),
                     onTap: () {
                       Navigator.push(context, MaterialPageRoute(builder: (context) => ItemsPage()));
+                    },
+                  ),
+                  DashboardCard(
+                    title: "Reports",
+                    icon: Icons.report,
+                     count: deliveredOrders.toString(),
+                    onTap: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => ReportSummaryPage()
+                      ),
+                      );
                     },
                   ),
                 ],
@@ -231,17 +255,17 @@ class DashboardCard extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Card(
-        margin: EdgeInsets.all(10),
+        margin: const EdgeInsets.all(10),
         elevation: 5,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(icon, size: 50, color: Colors.blue),
-            SizedBox(height: 10),
-            Text(title, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
-            SizedBox(height: 10),
-            Text(count, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 10),
+            Text(count, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           ],
         ),
       ),

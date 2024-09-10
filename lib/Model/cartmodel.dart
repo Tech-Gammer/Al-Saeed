@@ -1,47 +1,38 @@
+
 class CartItem {
-  final String itemId;
-  final String name;
-  final String imageUrl;
-  final String category;
-  final String rate;
-  final String description;
-  final int quantity;
-  final String uid; // Add uid field
+  String itemId;
+  final String adminId;
+  String name;
+  String imageUrl;
+  String category;
+  String rate;
+  String description;
+  int quantity;
+  String uid;
 
   CartItem({
     required this.itemId,
+    required this.adminId,
     required this.name,
     required this.imageUrl,
     required this.category,
     required this.rate,
     required this.description,
     required this.quantity,
-    required this.uid, // Initialize uid
+    required this.uid,
   });
 
   Map<String, dynamic> toMap() {
     return {
       'itemId': itemId,
+      'adminId': adminId,
       'name': name,
       'imageUrl': imageUrl,
       'category': category,
       'rate': rate,
       'description': description,
       'quantity': quantity,
-      'userId': uid, // Include uid in map
+      'uid': uid,
     };
-  }
-
-  factory CartItem.fromMap(Map<String, dynamic> map) {
-    return CartItem(
-      itemId: map['itemId'],
-      name: map['name'],
-      imageUrl: map['imageUrl'],
-      category: map['category'],
-      rate: map['rate'],
-      description: map['description'],
-      quantity: map['quantity'],
-      uid: map['userId'], // Read uid from map
-    );
   }
 }

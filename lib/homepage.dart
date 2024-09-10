@@ -2,9 +2,10 @@ import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:myfirstmainproject/drawerfrontside.dart';
+import 'drawerfrontside.dart';
 import 'itemslistpage.dart';
 import 'userprofile.dart';
 import 'admin/loginpage.dart';
@@ -21,7 +22,7 @@ class FrontPage extends StatefulWidget {
 
 class _FrontPageState extends State<FrontPage> {
   GlobalKey<ScaffoldState> _globalKey = GlobalKey<ScaffoldState>();
-  final DatabaseReference _dataRef = FirebaseDatabase.instance.ref("items");
+  final DatabaseReference _ratingRef = FirebaseDatabase.instance.ref("Feedback");
   final DatabaseReference _cartRef = FirebaseDatabase.instance.ref("cart");
   final DatabaseReference _sliderRef = FirebaseDatabase.instance.ref("slider images");
   final FirebaseAuth auth = FirebaseAuth.instance;
@@ -36,12 +37,12 @@ class _FrontPageState extends State<FrontPage> {
   String searchQuery = '';
   int _currentIndex = 0;
 
-
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
   }
+
   @override
   void initState() {
     super.initState();
@@ -50,6 +51,34 @@ class _FrontPageState extends State<FrontPage> {
     currentUser = FirebaseAuth.instance.currentUser;
     fetchCartItemCount();
     fetchUserRole();
+  }
+
+  Future<double> fetchRating(String itemId) async {
+    try {
+      double addrating = 0;
+      double? avgRating;
+      final snapshot = await _ratingRef.orderByChild('itemId').equalTo(itemId).get();
+      if (snapshot.exists) {
+        final Map<String, dynamic> allData = {};
+        final dataSnapshot = snapshot.value as Map;
+        List<dynamic> itemList = [];
+        itemList = dataSnapshot.values.toList();
+
+        for (int i = 0; i < itemList.length; i++) {
+          addrating += double.parse(itemList[i]['rating'].toString());
+        }
+
+        avgRating = (addrating / itemList.length);
+
+        // print(avgRating);
+        return avgRating;
+      } else {
+        return 0;
+      }
+    } catch (e) {
+      // print('Error fetching data: $e');
+      return 0;
+    }
   }
 
   Future<void> fetchUserRole() async {
@@ -65,7 +94,6 @@ class _FrontPageState extends State<FrontPage> {
             _isAdmin = (role == 0); // Assuming 0 indicates admin
           });
         } else {
-          // If the role is not found in the users node, check in the admin node
           final adminRef = FirebaseDatabase.instance.ref("admin/${currentUser.uid}");
           final adminSnapshot = await adminRef.child("role").get();
 
@@ -75,45 +103,40 @@ class _FrontPageState extends State<FrontPage> {
               _isAdmin = (role == 0); // Assuming 0 indicates admin
             });
           } else {
-            // Handle case where role is not found in either node
-            print("User role not found in both nodes.");
+            // print("User role not found in both nodes.");
           }
         }
       } catch (e) {
-        print('Error fetching user role: $e');
+        // print('Error fetching user role: $e');
       }
     }
   }
 
   Future<Map<String, dynamic>> fetchData() async {
     final Map<String, dynamic> itemsMap = {};
+    final DatabaseReference itemsRef = FirebaseDatabase.instance.ref('items');
+
     try {
-      final snapshot = await _dataRef.get();
+      final snapshot = await itemsRef.get();
       if (snapshot.exists) {
-        final admins = snapshot.value as Map<dynamic, dynamic>;
-        for (var adminId in admins.keys) {
-          final adminItemsRef = _dataRef.child(adminId);
-          final adminItemsSnapshot = await adminItemsRef.get();
-          if (adminItemsSnapshot.exists) {
-            final adminItems = adminItemsSnapshot.value as Map<dynamic, dynamic>;
-            for (var itemId in adminItems.keys) {
-              final itemData = adminItems[itemId] as Map<dynamic, dynamic>;
-              // Ensure all values are converted to strings if needed
-              final itemDataString = {
-                'item_name': itemData['item_name']?.toString() ?? 'No Name',
-                'category': itemData['category']?.toString() ?? 'No Category',
-                'rate': itemData['rate']?.toString() ?? 'No Rate',
-                'description': itemData['description']?.toString() ?? 'No description',
-                'image': itemData['image']?.toString() ?? '',
-              };
-              itemsMap['$adminId/$itemId'] = itemDataString;
-            }
-          }
+        final items = snapshot.value as Map<dynamic, dynamic>;
+        for (var itemId in items.keys) {
+          final itemData = items[itemId] as Map<dynamic, dynamic>;
+          final itemDataString = {
+            'item_name': itemData['item_name']?.toString() ?? 'No Name',
+            'category': itemData['category']?.toString() ?? 'No Category',
+            'rate': itemData['rate']?.toString() ?? 'No Rate',
+            'description': itemData['description']?.toString() ?? 'No description',
+            'image': itemData['image']?.toString() ?? '',
+            'adminId': itemData['adminId']?.toString() ?? '',
+          };
+          itemsMap[itemId] = itemDataString;
         }
       }
     } catch (e) {
-      print('Error fetching data: $e');
+      // print('Error fetching data: $e');
     }
+
     return itemsMap;
   }
 
@@ -127,7 +150,7 @@ class _FrontPageState extends State<FrontPage> {
         });
       }
     } catch (e) {
-      print('Error fetching slider images: $e');
+      // print('Error fetching slider images: $e');
     } finally {
       _checkIfLoadingComplete();
     }
@@ -136,28 +159,28 @@ class _FrontPageState extends State<FrontPage> {
   Future<void> fetchCartItemCount() async {
     if (currentUser != null) {
       try {
-        final userCartRef = _cartRef.child(currentUser!.uid);
-        final snapshot = await userCartRef.get();
-        if (snapshot.exists) {
-          final cartItems = Map<String, dynamic>.from(snapshot.value as Map);
+        String userId = currentUser!.uid;
+        final userCartRef = _cartRef.child(userId); // Reference to the current user's cart
+        final snapshot = await userCartRef.once(); // Get all cart items for the user
+
+        if (snapshot.snapshot.exists) {
+          final cartItems = Map<String, dynamic>.from(snapshot.snapshot.value as Map);
           setState(() {
-            _cartItemCount = cartItems.length;
+            _cartItemCount = cartItems.length; // Number of items in the cart
           });
         } else {
           setState(() {
-            _cartItemCount = 0;
+            _cartItemCount = 0; // No items in the cart
           });
         }
       } catch (e) {
-        print('Error fetching cart item count: $e');
-      } finally {
-        _checkIfLoadingComplete();
+        // print('Error fetching cart item count: $e');
       }
     }
   }
 
   void _checkIfLoadingComplete() {
-    Future.delayed(Duration(seconds: 5), () { // Adjust the duration here
+    Future.delayed(const Duration(seconds: 5), () {
       setState(() {
         _isLoading = false;
       });
@@ -168,7 +191,7 @@ class _FrontPageState extends State<FrontPage> {
     await auth.signOut().then((value) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => LoginPage()),
+        MaterialPageRoute(builder: (context) => const LoginPage()),
       );
     });
   }
@@ -182,22 +205,28 @@ class _FrontPageState extends State<FrontPage> {
   @override
   Widget build(BuildContext context) {
     final isSearching = searchQuery.isNotEmpty;
+    double rating;
 
     return SafeArea(
       child: Scaffold(
         key: _globalKey,
-        drawer: Drawerfrontside(),
+        drawer: const Drawerfrontside(),
         appBar: AppBar(
-          backgroundColor:  Color(0xFFe6b67e),
+          flexibleSpace: Image(
+            image: const AssetImage('images/art.jpg'),
+            color: Colors.white.withOpacity(0.5), colorBlendMode: BlendMode.modulate,
+            fit: BoxFit.cover,
+          ),
+
           title: SizedBox(
-              width: 100,
-              height: 70,
-              child: Image.asset("images/logomain.png")
+            width: 100,
+            height: 70,
+            child: Image.asset("images/logomain.png"),
           ),
           centerTitle: true,
           actions: [
             PopupMenuButton(
-              icon: currentUser == null ? Icon(Icons.login) : Icon(Icons.person_rounded),
+              icon: currentUser == null ? const Icon(Icons.login) : const Icon(Icons.person_rounded),
               itemBuilder: (BuildContext context) {
                 return [
                   if (currentUser != null)
@@ -205,7 +234,7 @@ class _FrontPageState extends State<FrontPage> {
                       onTap: () {
                         Navigator.push(context, MaterialPageRoute(builder: (context) => UserProfile()));
                       },
-                      child: Row(
+                      child: const Row(
                         children: [
                           Icon(Icons.person),
                           Text("       Profile"),
@@ -215,7 +244,7 @@ class _FrontPageState extends State<FrontPage> {
                   PopupMenuItem(
                     onTap: () {
                       if (currentUser == null) {
-                        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => LoginPage()));
+                        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const LoginPage()));
                       } else {
                         signOut();
                       }
@@ -232,7 +261,7 @@ class _FrontPageState extends State<FrontPage> {
                       onTap: () {
                         Navigator.push(context, MaterialPageRoute(builder: (context) => CustomerOrdersPage(comingFromCheckoutPage: false)));
                       },
-                      child: Row(
+                      child: const Row(
                         children: [
                           Icon(Icons.shopping_cart),
                           Text("       Orders"),
@@ -248,10 +277,10 @@ class _FrontPageState extends State<FrontPage> {
                 clipBehavior: Clip.none,
                 children: [
                   IconButton(
-                    icon: Icon(Icons.shopping_basket,),
+                    icon: const Icon(Icons.shopping_basket),
                     onPressed: () {
                       if (currentUser == null) {
-                        Navigator.push(context, MaterialPageRoute(builder: (context) => LoginPage()));
+                        Navigator.push(context, MaterialPageRoute(builder: (context) => const LoginPage()));
                       } else {
                         Navigator.push(context, MaterialPageRoute(builder: (context) => CartPage()));
                       }
@@ -267,7 +296,7 @@ class _FrontPageState extends State<FrontPage> {
                         foregroundColor: Colors.white,
                         child: Text(
                           _cartItemCount.toString(),
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.0),
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.0),
                         ),
                       ),
                     ),
@@ -279,270 +308,353 @@ class _FrontPageState extends State<FrontPage> {
         body: _isLoading
             ? CustomLoader()
             : SingleChildScrollView(
-          child: Column(
-            children: [
-              SizedBox(height: 6,),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: TextField(
-                  decoration: InputDecoration(
-                    labelText: 'Search',
-                    hintText: 'Search items...',
-                    prefixIcon: Icon(Icons.search),
-                    suffixIcon: _controller.text.isNotEmpty
-                        ? IconButton(
-                      icon: Icon(Icons.clear),
-                      onPressed: () {
-                        _controller.clear(); // Clears the text field
-                        _filterItems(''); // Optionally clear the filter
-                      },
-                    )
-                        : null,
-                    contentPadding: EdgeInsets.symmetric(vertical: 5.0),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                  ),
-                  controller: _controller,
-                  onChanged: _filterItems,
+          child: Container(
+            decoration: BoxDecoration(
+              image: DecorationImage(
+                image: const AssetImage("images/art.jpg"),
+                fit: BoxFit.fitHeight,
+                colorFilter: ColorFilter.mode(
+                  Colors.black.withOpacity(0.2), // Adjust opacity here
+                  BlendMode.dstATop,
                 ),
               ),
-
-              // Conditionally display the slider and other data
-              Visibility(
-                visible: !isSearching,
-                child: Column(
-                  children: [
-                    SizedBox(height: 10),
-                    Stack(
-                      children: [
-                        InkWell(
-                          onTap: () {
-                            print(_currentIndex);
+            ),
+            child: Column(
+              children: [
+                const SizedBox(height:6),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: SizedBox(
+                    height: 50,
+                    child: TextField(
+                      controller: _controller,
+                      decoration: InputDecoration(
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.search),
+                          onPressed: () {
+                            _filterItems(_controller.text);
                           },
-                          child: CarouselSlider(
-                            items: sliderImages
-                                .map((imageUrl) => Image.network(
-                              imageUrl,
-                              fit: BoxFit.fitHeight,
-                              width: double.infinity,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Icon(Icons.image_not_supported, size: 300);
-                              },
-                            ))
-                                .toList(),
-                            carouselController: _carouselController,
-                            options: CarouselOptions(
-                              scrollPhysics: const BouncingScrollPhysics(),
-                              autoPlay: true,
-                              aspectRatio: 2,
-                              viewportFraction: 1,
-                              onPageChanged: (index, reason) {
-                                setState(() {
-                                  _currentIndex = index;
-                                });
-                              },
+                        ),
+                        hintText: 'Search',
+                        filled: true,
+                        fillColor: const Color(0xFFe6b67e).withOpacity(0.2),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(color: Color(0xFFe6b67e)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(color: Color(0xFFe6b67e)),
+                        ),
+                      ),
+                      onChanged: _filterItems,
+                    ),
+                  ),
+                ),
+                Visibility(
+                  visible: !isSearching,
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 10),
+                      Stack(
+                        children: [
+                          InkWell(
+                            onTap: () {
+                              print(_currentIndex);
+                            },
+                            child: CarouselSlider(
+                              items: sliderImages
+                                  .map((imageUrl) => Image.network(
+                                imageUrl,
+                                fit: BoxFit.fitHeight,
+                                width: double.infinity,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const Icon(Icons.image_not_supported, size: 300);
+                                },
+                              ))
+                                  .toList(),
+                              carouselController: _carouselController,
+                              options: CarouselOptions(
+                                scrollPhysics: const BouncingScrollPhysics(),
+                                autoPlay: true,
+                                aspectRatio: 2,
+                                viewportFraction: 1,
+                                onPageChanged: (index, reason) {
+                                  setState(() {
+                                    _currentIndex = index;
+                                  });
+                                },
+                              ),
                             ),
                           ),
-                        ),
-                        Positioned(
-                          bottom: 0,
-                          left: 0,
-                          right: 0,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: sliderImages.asMap().entries.map((entry) {
-                              return GestureDetector(
-                                onTap: () => _carouselController.animateToPage(entry.key),
-                                child: Container(
-                                  width: _currentIndex == entry.key ? 17 : 7,
-                                  height: 7.0,
-                                  margin: const EdgeInsets.symmetric(horizontal: 3.0),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(10),
-                                    color: _currentIndex == entry.key ? Colors.brown : Colors.grey,
+                          Positioned(
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: sliderImages.asMap().entries.map((entry) {
+                                return GestureDetector(
+                                  onTap: () => _carouselController.animateToPage(entry.key),
+                                  child: Container(
+                                    width: _currentIndex == entry.key ? 17 : 7,
+                                    height: 7.0,
+                                    margin: const EdgeInsets.symmetric(horizontal: 3.0),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(10),
+                                      color: _currentIndex == entry.key ? Colors.brown : Colors.grey,
+                                    ),
                                   ),
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 10),
-                    Text(
-                      "We Provide Fresh Items",
-                      style: GoogleFonts.berkshireSwash(
-                        fontSize: 30,
-                        color: Colors.brown,
-                      ),
-                    ),
-                    SizedBox(height: 10),
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Column(
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              _buildCategoryIcon(Icons.cookie, "Sweets", "sweets"),
-                              SizedBox(width: 15),
-                              _buildCategoryIcon(Icons.local_pizza, "Pizza", "pizza"),
-                              SizedBox(width: 15),
-                              _buildCategoryIcon(Icons.icecream, "Icecream", "icecream"),
-                              SizedBox(width: 15),
-                            ],
+                                );
+                              }).toList(),
+                            ),
                           ),
                         ],
                       ),
-                    ),
-                    SizedBox(height: 10),
-                    Text(
-                      "Available Items",
-                      style: GoogleFonts.berkshireSwash(
-                        fontSize: 24,
-                        color: Colors.brown,
-                      ),
-                    ),
-                    SizedBox(height: 10),
-                  ],
-                ),
-              ),
-
-              // Display filtered items
-              FutureBuilder<Map<String, dynamic>>(
-                future: fetchData(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.active) {
-                    return Center(child: CircularProgressIndicator());
-                  } else if (snapshot.hasError) {
-                    return Center(child: Text('Error: ${snapshot.error}'));
-                  } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return Center(child: CircularProgressIndicator());
-                  }
-                  final adminItems = snapshot.data!;
-                  final filteredAdminItems = adminItems.entries.where((entry) {
-                    final item = entry.value;
-                    final item_name = item['item_name']?.toLowerCase() ?? '';
-                    final category = item['category']?.toLowerCase() ?? '';
-                    return item_name.contains(searchQuery) || category.contains(searchQuery);
-                  }).toList();
-
-                  return GridView.builder(
-                    shrinkWrap: true,
-                    physics: NeverScrollableScrollPhysics(),
-                    padding: EdgeInsets.all(8.0),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 16.0,
-                      mainAxisSpacing: 16.0,
-                      childAspectRatio: 0.5,
-                    ),
-                    itemCount: filteredAdminItems.length,
-                    itemBuilder: (context, index) {
-                      final item = filteredAdminItems[index].value;
-                      final imageUrl = item['image'] as String?;
-                      final item_name = item['item_name'] as String? ?? 'No Name';
-                      final category = item['category'] as String? ?? 'No Category';
-                      final rate = item['rate'] as String? ?? 'No Rate';
-                      final description = item['description'] as String? ?? 'No description';
-                      final itemId = filteredAdminItems[index].key;
-                      return imageUrl != null && imageUrl.isNotEmpty
-                          ? GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ItemSelectPage(
-                                item_name: item_name,
-                                imageUrl: imageUrl,
-                                category: category,
-                                rate: rate,
-                                description: description,
-                                itemId: itemId,
-                              ),
-                            ),
-                          );
-                        },
-                        child: Card(
-                          elevation: 5,
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                height: 150,
-                                width: 120,
-                                child: CircleAvatar(
-                                  radius: 70,
-                                  backgroundImage: NetworkImage(imageUrl),
-                                ),
-                              ),
-                              SizedBox(height: 8),
-                              Text(item_name, style: GoogleFonts.lora(textStyle: TextStyle(fontSize: 20, color: Colors.brown))),
-                              Text(category, style: GoogleFonts.lora(textStyle: TextStyle(fontSize: 14, color: Colors.brown))),
-                              Text("Rs $rate", style: GoogleFonts.lora(textStyle: TextStyle(fontSize: 14, color: Colors.brown))),
-                              SizedBox(height: 8),
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => ItemSelectPage(
-                                        imageUrl: imageUrl,
-                                        category: category,
-                                        rate: rate,
-                                        description: description,
-                                        itemId: itemId,
-                                        item_name: item_name,
-                                      ),
-                                    ),
-                                  );
-                                },
-                                child: Container(
-                                  width: 150,
-                                  height: 40,
-                                  decoration: BoxDecoration(color: Color(0xFFE0A45E), borderRadius: BorderRadius.circular(20)),
-                                  child: Center(
-                                    child: Text(
-                                      "ADD TO CART",
-                                      style: GoogleFonts.lora(
-                                        textStyle: TextStyle(fontSize: 17, color: Colors.white, fontWeight: FontWeight.bold),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                      const SizedBox(height: 10),
+                      Text(
+                        "We Provide Fresh Items",
+                        style: GoogleFonts.berkshireSwash(
+                          fontSize: 30,
+                          color: Colors.brown,
                         ),
-                      )
-                          : SizedBox.shrink();
-                    },
-                  );
-                },
-              ),
-              _buildFooter(),
-            ],
+                      ),
+                      const SizedBox(height: 10),
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                _buildCategoryIcon(Icons.cookie, "Sweets", "sweets"),
+                                const SizedBox(width: 15),
+                                _buildCategoryIcon(Icons.local_pizza, "Pizza", "pizza"),
+                                const SizedBox(width: 15),
+                                _buildCategoryIcon(Icons.icecream, "Icecream", "icecream"),
+                                const SizedBox(width: 15),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        "Available Items",
+                        style: GoogleFonts.berkshireSwash(
+                          fontSize: 24,
+                          color: Colors.brown,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Column(
+                    children: [
+
+                      const SizedBox(height: 16),
+                      FutureBuilder<Map<String, dynamic>>(
+                        future: fetchData(),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState == ConnectionState.active) {
+                            return const Center(child: CircularProgressIndicator());
+                          } else if (snapshot.hasError) {
+                            return Center(child: Text('Error fetching data: ${snapshot.error}'));
+                          } else if (snapshot.hasData) {
+                            final Map<String, dynamic> itemsMap = snapshot.data!;
+                            final filteredItems = itemsMap.entries.where((entry) {
+                              final item = entry.value;
+                              return item['item_name'].toString().toLowerCase().contains(searchQuery);
+                            }).toList();
+
+                            return GridView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              padding: const EdgeInsets.all(8.0),
+                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                crossAxisSpacing: 16.0,
+                                mainAxisSpacing: 16.0,
+                                childAspectRatio: 0.6,
+                              ),
+                              itemCount: filteredItems.length,
+                              itemBuilder: (context, index) {
+                                final item = filteredItems[index].value;
+                                final imageUrl = item['image'] as String?;
+                                final item_name = item['item_name'] as String? ?? 'No Name';
+                                final category = item['category'] as String? ?? 'No Category';
+                                final rate = item['rate'] as String? ?? 'No Rate';
+                                final description = item['description'] as String? ?? 'No description';
+                                final adminId = item['adminId'] as String? ?? 'No adminId';
+                                final itemId = filteredItems[index].key;
+
+                                return FutureBuilder<double>(
+                                  future: fetchRating(itemId),
+                                  builder: (context, snapshot) {
+                                    rating = snapshot.data ?? 3.0;
+                                    return imageUrl != null && imageUrl.isNotEmpty
+                                        ? GestureDetector(
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => ItemSelectPage(
+                                              item_name: item_name,
+                                              imageUrl: imageUrl,
+                                              category: category,
+                                              rate: rate,
+                                              description: description,
+                                              itemId: itemId,
+                                              adminId: adminId,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      child: Stack(
+                                        children: [
+                                          Card(
+                                            elevation: 5,
+                                            child: Column(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                SizedBox(
+                                                  height: 120,
+                                                  width: 120,
+                                                  child: CircleAvatar(
+                                                    radius: 70,
+                                                    backgroundImage: NetworkImage(imageUrl),
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 8),
+                                                Center(
+                                                  child: Padding(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 5),
+                                                    child: Text(
+                                                      item_name,
+                                                      style: GoogleFonts.lora(
+                                                        textStyle: const TextStyle(fontSize: 18, color: Colors.brown, fontWeight: FontWeight.bold),
+                                                      ),
+                                                      maxLines: 2,
+                                                      textAlign: TextAlign.center,
+                                                    ),
+                                                  ),
+                                                ),
+                                                Text(
+                                                  category,
+                                                  style: GoogleFonts.lora(
+                                                    textStyle: const TextStyle(fontSize: 14, color: Colors.brown),
+                                                  ),
+                                                ),
+                                                Text(
+                                                  "Rs $rate",
+                                                  style: GoogleFonts.lora(
+                                                    textStyle: const TextStyle(fontSize: 14, color: Colors.brown),
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 8),
+                                                RatingBar.builder(
+                                                  ignoreGestures: true,
+                                                  itemSize: 25,
+                                                  initialRating: rating,
+                                                  minRating: 1,
+                                                  direction: Axis.horizontal,
+                                                  allowHalfRating: true,
+                                                  itemCount: 5,
+                                                  itemBuilder: (context, _) => const Icon(
+                                                    Icons.star,
+                                                    color: Colors.amber,
+                                                  ),
+                                                  onRatingUpdate: (newRating) {
+                                                    // Optional: handle rating update if needed
+                                                  },
+                                                ),
+                                                const SizedBox(height: 8),
+                                              ],
+                                            ),
+                                          ),
+                                          Positioned(
+                                            top: 10,
+                                            right: 10,
+                                            child: GestureDetector(
+                                              onTap: () {
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (context) => ItemSelectPage(
+                                                      item_name: item_name,
+                                                      imageUrl: imageUrl,
+                                                      category: category,
+                                                      rate: rate,
+                                                      description: description,
+                                                      itemId: itemId,
+                                                      adminId: adminId,
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                              child: Container(
+                                                padding: const EdgeInsets.all(8),
+                                                decoration: const BoxDecoration(
+                                                  color: Colors.orange,
+                                                  shape: BoxShape.circle,
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      color: Colors.black26,
+                                                      offset: Offset(2, 2),
+                                                      blurRadius: 4,
+                                                    ),
+                                                  ],
+                                                ),
+                                                child: const Icon(
+                                                  Icons.shopping_basket,
+                                                  color: Colors.white,
+                                                  size: 24,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+
+                                    )
+                                        : const SizedBox.shrink();
+                                  },
+                                );
+                              },
+                            );
+                          } else {
+                            return const CircularProgressIndicator();
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                _buildFooter(),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-
   Widget _buildCategoryIcon(IconData icon, String label, String category) {
     return GestureDetector(
       onTap: () {
-        Navigator.push(context, MaterialPageRoute(builder: (context) => ItemListPage(uid: 'uid')));
+        Navigator.push(context, MaterialPageRoute(builder: (context) => const ItemListPage(uid: 'uid')));
       },
       child: Column(
         children: [
           CircleAvatar(
-            backgroundColor: Color(0xFFe6b67e),
+            backgroundColor: const Color(0xFFe6b67e),
             radius: 30,
             child: Icon(icon, size: 30, color: Colors.brown),
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Text(label),
         ],
       ),
@@ -551,34 +663,45 @@ class _FrontPageState extends State<FrontPage> {
 
   Widget _buildFooter() {
     return Container(
-      color: Color(0xFFe6b67e),
-      padding: EdgeInsets.all(16.0),
+      width: double.infinity,
+      // color: Color(0xFFe6b67e),
+      decoration: BoxDecoration(
+        image: DecorationImage(
+          image: const AssetImage("images/art.jpg"),
+          fit: BoxFit.cover,
+          colorFilter: ColorFilter.mode(
+            Colors.black.withOpacity(0.5), // Adjust opacity here
+            BlendMode.dstATop,
+          ),
+        ),
+      ),
+      padding: const EdgeInsets.all(16.0),
       child: Column(
         children: [
           Text(
             "Alsaeed Sweets & Bakers",
             style: GoogleFonts.lora(
-              textStyle: TextStyle(
+              textStyle: const TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
                 color: Colors.brown,
               ),
             ),
           ),
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           Container(
             height: 100,
             child: Image.asset('images/logomain.png'), // Replace with your logo asset
           ),
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           Text(
             "We offer a variety of fresh and delicious sweets and bakery items. Our commitment to quality and customer satisfaction is our top priority. Visit us for a delightful experience!",
             textAlign: TextAlign.center,
             style: GoogleFonts.lora(
-              textStyle: TextStyle(fontSize: 16, color: Colors.brown),
+              textStyle: const TextStyle(fontSize: 16, color: Colors.brown),
             ),
           ),
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           _buildSocialMediaLinks(),
         ],
       ),
@@ -590,23 +713,22 @@ class _FrontPageState extends State<FrontPage> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         IconButton(
-          icon: Icon(FontAwesomeIcons.facebook, color: Colors.blue),
+          icon: const Icon(FontAwesomeIcons.facebook, color: Colors.blue),
           onPressed: () {},
         ),
         IconButton(
-          icon: Icon(FontAwesomeIcons.instagram, color: Colors.pink),
+          icon: const Icon(FontAwesomeIcons.instagram, color: Colors.pink),
           onPressed: () {},
         ),
         IconButton(
-          icon: Icon(FontAwesomeIcons.twitter, color: Colors.blue),
+          icon: const Icon(FontAwesomeIcons.twitter, color: Colors.blue),
           onPressed: () {},
         ),
       ],
     );
   }
+
 }
-
-
 
 class CustomLoader extends StatelessWidget {
   @override
@@ -628,7 +750,7 @@ class CustomLoader extends StatelessWidget {
               ),
             ),
             // Loader positioned below the logo
-            Positioned(
+            const Positioned(
               bottom: 0,
               child: CircularProgressIndicator(
                 strokeWidth: 8.0,
@@ -637,11 +759,12 @@ class CustomLoader extends StatelessWidget {
             ),
           ],
         ),
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           shape: BoxShape.circle,
         ),
       ),
     );
   }
 }
+
 

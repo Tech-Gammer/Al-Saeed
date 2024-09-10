@@ -1,8 +1,6 @@
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../components.dart';
-import 'admin.dart';
 
 class AddCategory extends StatefulWidget {
   const AddCategory({Key? key}) : super(key: key);
@@ -27,7 +25,7 @@ class _AddCategoryState extends State<AddCategory> {
             padding: const EdgeInsets.all(8.0),
             child: TextField(
               controller: categoryController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.all(Radius.circular(10)),
                 ),
@@ -54,7 +52,7 @@ class _AddCategoryState extends State<AddCategory> {
 
                 if (name.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Please Enter The Fields")),
+                    const SnackBar(content: Text("Please Enter The Fields")),
                   );
                   setState(() {
                     isSaving = false;
@@ -66,7 +64,7 @@ class _AddCategoryState extends State<AddCategory> {
               child: Container(
                 width: 200.0,
                 height: 50.0,
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: Color(0xFFE0A45E),
                   borderRadius: BorderRadius.all(Radius.circular(20)),
                 ),
@@ -89,7 +87,7 @@ class _AddCategoryState extends State<AddCategory> {
 
     if (snapshot.snapshot.exists) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Category already exists")),
+        const SnackBar(content: Text("Category already exists")),
       );
       setState(() {
         isSaving = false;
@@ -106,7 +104,7 @@ class _AddCategoryState extends State<AddCategory> {
       'id': id,
     }).then((value) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Data Saved Successfully")),
+        const SnackBar(content: Text("Data Saved Successfully")),
       );
 
       // Clear the form
@@ -116,7 +114,7 @@ class _AddCategoryState extends State<AddCategory> {
       });
     }).catchError((error) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Something went wrong")),
+        const SnackBar(content: Text("Something went wrong")),
       );
       setState(() {
         isSaving = false;

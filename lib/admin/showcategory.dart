@@ -62,12 +62,12 @@ class _ShowCategoryState extends State<ShowCategory> {
           categories.remove(categoryName);
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Category deleted successfully")),
+          const SnackBar(content: Text("Category deleted successfully")),
         );
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error deleting category")),
+        const SnackBar(content: Text("Error deleting category")),
       );
     }
   }
@@ -77,21 +77,21 @@ class _ShowCategoryState extends State<ShowCategory> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text("Confirm Deletion"),
+          title: const Text("Confirm Deletion"),
           content: Text("Are you sure you want to delete the category '$categoryName'?"),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
               },
-              child: Text("Cancel"),
+              child: const Text("Cancel"),
             ),
             TextButton(
               onPressed: () async {
                 Navigator.pop(context);
                 await deleteCategory(categoryName);
               },
-              child: Text("Delete"),
+              child: const Text("Delete"),
             ),
           ],
         );
@@ -125,7 +125,7 @@ class _ShowCategoryState extends State<ShowCategory> {
               child: ListTile(
                 title: Text(category, style: GoogleFonts.lora()),
                 trailing: IconButton(
-                  icon: Icon(Icons.delete, color: Colors.red),
+                  icon: const Icon(Icons.delete, color: Colors.red),
                   onPressed: () => showDeleteConfirmationDialog(category),
                 ),
               ),
@@ -138,7 +138,7 @@ class _ShowCategoryState extends State<ShowCategory> {
           showAddCategoryDialog();
         },
         child: const Icon(Icons.add,color: Colors.white,),
-        backgroundColor: Color(0xFFE0A45E),
+        backgroundColor: const Color(0xFFE0A45E),
       ),
     );
   }
@@ -147,7 +147,7 @@ class _ShowCategoryState extends State<ShowCategory> {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AddCategory();
+        return const AddCategory();
       },
     );
   }

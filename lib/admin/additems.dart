@@ -4,13 +4,9 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:flutter/cupertino.dart';
-import 'package:myfirstmainproject/admin/addcategory.dart';
 import '../components.dart';
-import 'admin.dart';
-import 'package:flutter/services.dart';
+import 'addcategory.dart';
 
 class AddItems extends StatefulWidget {
   const AddItems({super.key});
@@ -59,7 +55,7 @@ class _AddItemsState extends State<AddItems> {
         });
       }
     } catch (e) {
-      print('Error fetching categories: $e');
+      // print('Error fetching categories: $e');
     }
   }
 
@@ -75,14 +71,14 @@ class _AddItemsState extends State<AddItems> {
         }
       });
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("No Image Selected")));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("No Image Selected")));
     }
   }
 
   Future<void> upload_Image() async {
     if (file != null || pickfile != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Uploading Image...")));
-      final imageRef = storref.ref().child("Images/${DateTime.now().millisecondsSinceEpoch}.jpg");
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Uploading Image...")));
+      final imageRef = storref.ref().child("Item Images/${DateTime.now().millisecondsSinceEpoch}.jpg");
       UploadTask uploadTask;
 
       if (kIsWeb) {
@@ -95,7 +91,7 @@ class _AddItemsState extends State<AddItems> {
       await uploadTask.whenComplete(() async {
         url = await imageRef.getDownloadURL();
         dref1.child("img").set(url).then((value) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Image uploaded successfully")));
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Image uploaded successfully")));
         }).onError((error, stackTrace) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $error")));
         });
@@ -114,7 +110,7 @@ class _AddItemsState extends State<AddItems> {
 
     if (snapshot.snapshot.exists) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Item with this name already exists")),
+        const SnackBar(content: Text("Item with this name already exists")),
       );
       setState(() {
         isSaving = false;
@@ -127,41 +123,45 @@ class _AddItemsState extends State<AddItems> {
 
   void save() async {
     if (url == null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error uploading image. Please try again.")));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Error uploading image. Please try again.")));
       setState(() {
         isSaving = false;
       });
       return;
     }
 
-    String uid = FirebaseAuth.instance.currentUser!.uid; // Get the current user's UID
-    String id = dref.child(uid).push().key.toString(); // Generate a new item ID
+
+    String itemId = dref.push().key.toString();
+    String name = nc.text.trim();
+    String description = dc.text.trim();
+    String rate = rc.text.trim();
+    String? aId = FirebaseAuth.instance.currentUser?.uid;
 
     // Convert rate to integer and handle any parsing errors
     int? rateInt;
     try {
       rateInt = int.tryParse(rate);
       if (rateInt == null) {
-        throw FormatException("Invalid rate format");
+        throw const FormatException("Invalid rate format");
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Invalid rate format")));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Invalid rate format")));
       setState(() {
         isSaving = false;
       });
       return;
     }
 
-    dref.child(uid).child(id).set({
+    await dref.child(itemId).set({
       'item_name': item_name,
       'description': description,
       'rate': rateInt.toString(), // Save rate as string
       'category': category,
       'image': url,
-      'itemId': id,
-      'adminId': uid,
+      'itemId': itemId,
+      'adminId': aId,
     }).then((value) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Data Saved Successfully")));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Data Saved Successfully")));
 
       // Clear the form
       setState(() {
@@ -178,7 +178,7 @@ class _AddItemsState extends State<AddItems> {
         category = "";
       });
     }).catchError((error) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Something went wrong")));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Something went wrong")));
       setState(() {
         isSaving = false;
       });
@@ -194,7 +194,7 @@ class _AddItemsState extends State<AddItems> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             Stack(
               alignment: Alignment.center,
               children: [
@@ -207,7 +207,7 @@ class _AddItemsState extends State<AddItems> {
                       : null,
                   backgroundColor: Colors.grey[200],
                   child: file == null && pickfile == null
-                      ? Icon(Icons.image, color: Colors.grey, size: 100)
+                      ? const Icon(Icons.image, color: Colors.grey, size: 100)
                       : null,
                 ),
                 Positioned(
@@ -220,7 +220,7 @@ class _AddItemsState extends State<AddItems> {
                 ),
               ],
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: TextField(
@@ -291,14 +291,14 @@ class _AddItemsState extends State<AddItems> {
                   ),
                   IconButton(
                     onPressed: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => AddCategory()));
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => const AddCategory()));
                     },
                     icon: const Icon(Icons.add, size: 40),
                   ),
                 ],
               ),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             Card(
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20.0),
@@ -314,7 +314,7 @@ class _AddItemsState extends State<AddItems> {
                   description = dc.text.toString();
                   rate = rc.text.toString();
                   if (item_name.isEmpty || description.isEmpty || rate.isEmpty || category.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Please Enter The Fields")));
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please Enter The Fields")));
                     setState(() {
                       isSaving = false;
                     });
@@ -349,7 +349,7 @@ class CustomLoader extends StatelessWidget {
       child: Container(
         width: 80,
         height: 80,
-        child: Stack(
+        child: const Stack(
           alignment: Alignment.center,
           children: [
             Positioned(
@@ -361,7 +361,7 @@ class CustomLoader extends StatelessWidget {
             ),
           ],
         ),
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           shape: BoxShape.circle,
         ),
       ),

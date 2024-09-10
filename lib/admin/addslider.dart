@@ -1,14 +1,10 @@
 import 'dart:io';
-
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
-
 import '../components.dart';
-import 'admin.dart';
 
 class AddSlider extends StatefulWidget {
   const AddSlider({super.key});
@@ -37,14 +33,14 @@ class _AddSliderState extends State<AddSlider> {
         }
       });
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("No Image Selected")));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("No Image Selected")));
     }
   }
 
   Future<void> uploadImage() async {
     if (file != null || pickfile != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Uploading Image...")));
-      final imageRef = storref.ref().child("Images/${DateTime.now().millisecondsSinceEpoch}.jpg");
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Uploading Image...")));
+      final imageRef = storref.ref().child("Slide Images/${DateTime.now().millisecondsSinceEpoch}.jpg");
       UploadTask uploadTask;
 
       if (kIsWeb) {
@@ -56,7 +52,7 @@ class _AddSliderState extends State<AddSlider> {
 
       await uploadTask.whenComplete(() async {
         url = await imageRef.getDownloadURL();
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Image uploaded successfully")));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Image uploaded successfully")));
       }).catchError((error) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $error")));
       });
@@ -65,7 +61,7 @@ class _AddSliderState extends State<AddSlider> {
 
   void save() async {
     if (url == null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error uploading image. Please try again.")));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Error uploading image. Please try again.")));
       setState(() {
         isSaving = false;
       });
@@ -76,14 +72,14 @@ class _AddSliderState extends State<AddSlider> {
       'image': url,
       'key': id,
     }).then((value) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Data Saved Successfully")));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Data Saved Successfully")));
       setState(() {
         file = null;
         pickfile = null;
         isSaving = false;
       });
     }).catchError((error) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Something went wrong")));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Something went wrong")));
       setState(() {
         isSaving = false;
       });
@@ -97,7 +93,7 @@ class _AddSliderState extends State<AddSlider> {
       body: Center(
         child: Column(
           children: [
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             Stack(
               alignment: Alignment.center,
               children: [
@@ -109,7 +105,7 @@ class _AddSliderState extends State<AddSlider> {
                     : CircleAvatar(
                   radius: 170,
                   backgroundColor: Colors.grey[300], // Placeholder color
-                  child: Text(
+                  child: const Text(
                     "No Image",
                     style: TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold),
                   ),
@@ -119,7 +115,7 @@ class _AddSliderState extends State<AddSlider> {
                   right: 15,
                   child: GestureDetector(
                     onTap: getImage,
-                    child: CircleAvatar(
+                    child: const CircleAvatar(
                       radius: 30,
                       backgroundColor: Colors.white,
                       child: Icon(
@@ -132,7 +128,7 @@ class _AddSliderState extends State<AddSlider> {
                 ),
               ],
             ),
-            SizedBox(height: 30,),
+            const SizedBox(height: 30,),
             Card(
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20.0),
@@ -157,7 +153,7 @@ class _AddSliderState extends State<AddSlider> {
                 child: Container(
                   width: 200.0,
                   height: 50.0,
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: Color(0xFFE0A45E),
                     borderRadius: BorderRadius.all(Radius.circular(20)),
                   ),

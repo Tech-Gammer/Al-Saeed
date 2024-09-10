@@ -5,11 +5,13 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
-
+import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'components.dart';
+import 'package:geocoding/geocoding.dart';
+
 
 class UserProfile extends StatefulWidget {
   @override
@@ -18,6 +20,7 @@ class UserProfile extends StatefulWidget {
 
 class _UserProfileState extends State<UserProfile> {
   final DatabaseReference _userRef = FirebaseDatabase.instance.ref("users");
+  final DatabaseReference _riderRef = FirebaseDatabase.instance.ref("riders");
   final FirebaseStorage _storage = FirebaseStorage.instance;
   User? currentUser = FirebaseAuth.instance.currentUser;
   bool obscurePassword = true;
@@ -25,22 +28,27 @@ class _UserProfileState extends State<UserProfile> {
   bool _isUploadingImage = false;
   bool _isDeletingImage = false;
   String? _role;
-
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _zipCodeController = TextEditingController();
+  GoogleMapController? _controller;
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   String? _profileImageUrl;
   Uint8List? _imageBytes;
+  LatLng _currentPosition =  const LatLng(31.5925, 74.3095);
 
   @override
   void initState() {
     super.initState();
     fetchUserData();
+    setState(() {
+      _addressController.text = _currentPosition.toString();
+
+    });
   }
 
   Future<void> fetchUserData() async {
@@ -76,7 +84,23 @@ class _UserProfileState extends State<UserProfile> {
               _role = 'Buyer';
             });
           } else {
-            print("No user data found");
+            // Check in the riders node
+            final riderSnapshot = await _riderRef.child(currentUser!.uid).once();
+            if (riderSnapshot.snapshot.value != null) {
+              final data = Map<String, dynamic>.from(riderSnapshot.snapshot.value as Map);
+              setState(() {
+                _nameController.text = data['name'] ?? '';
+                _emailController.text = data['email'] ?? '';
+                _phoneController.text = data['phone'] ?? '';
+                _passwordController.text = data['password'] ?? '';
+                _addressController.text = data['address'] ?? '';
+                _zipCodeController.text = data['zip_code'] ?? '';
+                _profileImageUrl = data['profileImage'];
+                _role = 'Rider';
+              });
+            } else {
+              print("No user data found");
+            }
           }
         }
       } catch (e) {
@@ -140,6 +164,8 @@ class _UserProfileState extends State<UserProfile> {
 
         final ref = _role == 'Admin'
             ? FirebaseDatabase.instance.ref("admin").child(currentUser!.uid)
+            : _role == 'Rider'
+            ? _riderRef.child(currentUser!.uid)
             : _userRef.child(currentUser!.uid);
 
         await ref.update({'profileImage': downloadUrl});
@@ -147,7 +173,7 @@ class _UserProfileState extends State<UserProfile> {
           _profileImageUrl = downloadUrl;
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Image uploaded successfully")));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Image uploaded successfully")));
       } catch (e) {
         print('Error uploading image: $e');
       } finally {
@@ -170,6 +196,8 @@ class _UserProfileState extends State<UserProfile> {
 
         final ref = _role == 'Admin'
             ? FirebaseDatabase.instance.ref("admin").child(currentUser!.uid)
+            : _role == 'Rider'
+            ? _riderRef.child(currentUser!.uid)
             : _userRef.child(currentUser!.uid);
 
         await ref.update({'profileImage': null});
@@ -177,7 +205,7 @@ class _UserProfileState extends State<UserProfile> {
           _profileImageUrl = null;
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Image deleted successfully")));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Image deleted successfully")));
       } catch (e) {
         print('Error deleting image: $e');
       } finally {
@@ -188,12 +216,15 @@ class _UserProfileState extends State<UserProfile> {
     }
   }
 
+
   Future<void> updateUserData() async {
     if (_formKey.currentState!.validate()) {
       if (currentUser != null) {
         try {
           final ref = _role == 'Admin'
               ? FirebaseDatabase.instance.ref("admin").child(currentUser!.uid)
+              : _role == 'Rider'
+              ? _riderRef.child(currentUser!.uid)
               : _userRef.child(currentUser!.uid);
 
           final snapshot = await ref.once();
@@ -220,6 +251,8 @@ class _UserProfileState extends State<UserProfile> {
           }
           if (_addressController.text != currentData['address']) {
             updates['address'] = _addressController.text;
+            updates['latitude'] = _currentPosition.latitude; // Save latitude
+            updates['longitude'] = _currentPosition.longitude; // Save longitude
             hasChanges = true;
           }
           if (_zipCodeController.text != currentData['zip_code']) {
@@ -229,9 +262,9 @@ class _UserProfileState extends State<UserProfile> {
 
           if (hasChanges) {
             await ref.update(updates);
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Profile updated successfully")));
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Profile updated successfully")));
           } else {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("No changes detected")));
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("No changes to update")));
           }
         } catch (e) {
           print('Error updating user data: $e');
@@ -240,14 +273,145 @@ class _UserProfileState extends State<UserProfile> {
     }
   }
 
+
+  Future<Position> _determinePosition() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return Future.error('Location services are disabled.');
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return Future.error('Location permissions are denied');
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      return Future.error(
+          'Location permissions are permanently denied, we cannot request permissions.');
+    }
+
+    return await Geolocator.getCurrentPosition();
+  }
+
+
+  Future<void> _getUserLocation() async {
+    Position position = await _determinePosition();
+    setState(() {
+      _currentPosition = LatLng(position.latitude, position.longitude);
+    });
+
+    try {
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+          _currentPosition.latitude,
+          _currentPosition.longitude
+      );
+
+      if (placemarks.isNotEmpty) {
+        Placemark place = placemarks[0];
+        String fullAddress = '${place.street}, ${place.locality}, ${place.postalCode}, ${place.country}';
+
+        setState(() {
+          _addressController.text = fullAddress;
+          // _zipCodeController.text = place.postalCode ?? '';
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Location fetched successfully")),
+        );
+      }
+    } catch (e) {
+      print('Error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Failed to fetch address")),
+      );
+    }
+
+    _controller?.animateCamera(CameraUpdate.newLatLng(_currentPosition));
+  }
+
+  Future<void> _mapDialog() async {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(builder: (BuildContext context, StateSetter setState) {
+          return AlertDialog(
+            scrollable: true,
+            content: Column(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  clipBehavior: Clip.hardEdge,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(width: 5, style: BorderStyle.solid),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    height: 400,
+                    width: 800,
+                    child: GoogleMap(
+                      onMapCreated: (GoogleMapController controller) {
+                        _controller = controller;
+                      },
+                      initialCameraPosition: CameraPosition(
+                        target: _currentPosition,
+                        zoom: 14.0,
+                      ),
+                      markers: {
+                        Marker(
+                          markerId: const MarkerId("currentLocation"),
+                          position: _currentPosition,
+                        ),
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20,),
+                Center(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ElevatedButton(
+                        onPressed: () async {
+                          await _getUserLocation();
+
+                          setState(() {
+                            _controller?.animateCamera(
+                              CameraUpdate.newLatLng(_currentPosition),
+                            );
+                          });
+                          await Future.delayed(const Duration(seconds: 3));
+
+                          Navigator.pop(context);
+                        },
+                        child: const Text('Select Current Location'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        });
+      },
+    );
+  }
+
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: CustomAppBar.customAppBar("User Profile"),
       body: _isLoading
-          ? Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator())
           : Padding(
-        padding: EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
           child: SingleChildScrollView(
@@ -261,35 +425,35 @@ class _UserProfileState extends State<UserProfile> {
                         radius: 50,
                         backgroundImage: _profileImageUrl != null
                             ? NetworkImage(_profileImageUrl!)
-                            : AssetImage('assets/placeholder.png') as ImageProvider,
+                            : const AssetImage('images/no_image.png') as ImageProvider,
                         child: _imageBytes == null && _profileImageUrl == null
-                            ? Icon(Icons.camera_alt, color: Colors.white, size: 30)
+                            ? const Icon(Icons.camera_alt, color: Colors.white, size: 30)
                             : null,
                       ),
                       if (_isUploadingImage)
-                        Positioned(
+                        const Positioned(
                           bottom: 0,
                           right: 0,
                           child: CircularProgressIndicator(),
                         ),
-                      if (_profileImageUrl != null)
+                      if (_profileImageUrl != null && _isDeletingImage)
                         Positioned(
                           bottom: 0,
                           right: 0,
                           child: IconButton(
-                            icon: Icon(Icons.delete, color: Colors.red),
+                            icon: const Icon(Icons.delete, color: Colors.red),
                             onPressed: _deleteImage,
                           ),
                         ),
                     ],
                   ),
                 ),
-                SizedBox(height: 20),
-                Text("Role: $_role", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                SizedBox(height: 20),
+                const SizedBox(height: 20),
+                Text("Role: $_role", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 20),
                 TextFormField(
                   controller: _nameController,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'Name',
                     border: OutlineInputBorder(),
                   ),
@@ -300,10 +464,10 @@ class _UserProfileState extends State<UserProfile> {
                     return null;
                   },
                 ),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 TextFormField(
                   controller: _emailController,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'Email',
                     border: OutlineInputBorder(),
                     enabled: false,
@@ -318,10 +482,10 @@ class _UserProfileState extends State<UserProfile> {
                     return null;
                   },
                 ),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 TextFormField(
                   controller: _phoneController,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'Phone',
                     border: OutlineInputBorder(),
                   ),
@@ -329,16 +493,21 @@ class _UserProfileState extends State<UserProfile> {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your phone number';
                     }
+                    // Regex for validating Pakistani phone numbers
+                    final regex = RegExp(r'^\+92[0-9]{10}$|^03[0-9]{9}$');
+                    if (!regex.hasMatch(value)) {
+                      return 'Please enter a valid Pakistani phone number';
+                    }
                     return null;
                   },
                 ),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 TextFormField(
                   controller: _passwordController,
                   obscureText: obscurePassword,
                   decoration: InputDecoration(
                     labelText: 'Password',
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
                     suffixIcon: IconButton(
                       icon: Icon(obscurePassword ? Icons.visibility : Icons.visibility_off),
                       onPressed: () {
@@ -359,12 +528,16 @@ class _UserProfileState extends State<UserProfile> {
                     return null;
                   },
                 ),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 TextFormField(
-                  controller: _addressController,
+                  // readOnly: true,
+                   controller: _addressController,
                   decoration: InputDecoration(
                     labelText: 'Address',
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
+                    suffixIcon: IconButton( onPressed: () {
+                      _mapDialog();
+                    }, icon: const Icon(Icons.location_history),)
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -373,10 +546,10 @@ class _UserProfileState extends State<UserProfile> {
                     return null;
                   },
                 ),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 TextFormField(
                   controller: _zipCodeController,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'Zip Code',
                     border: OutlineInputBorder(),
                   ),
@@ -387,22 +560,22 @@ class _UserProfileState extends State<UserProfile> {
                     return null;
                   },
                 ),
-                SizedBox(height: 20),
+                const SizedBox(height: 20),
                 Card(
-                  color: Color(0xFFe6b67e),
+                  color: const Color(0xFFe6b67e),
                   child: InkWell(
                     onTap: updateUserData,
                     child: Container(
                       width: 200.0,
                       height: 50.0,
-                      decoration: BoxDecoration(
+                      decoration: const BoxDecoration(
                         color: Color(0xFFe6b67e),
                         borderRadius: BorderRadius.all(Radius.circular(20)),
                       ),
-                      child: Center(
+                      child: const Center(
                         child: Text(
-                          "Update Profile",
-                          style: NewCustomTextStyles.newcustomTextStyle
+                            "Update Profile",
+                            style: NewCustomTextStyles.newcustomTextStyle
                         ),
                       ),
                     ),

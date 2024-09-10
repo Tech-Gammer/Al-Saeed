@@ -1,12 +1,9 @@
-import 'dart:io';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:myfirstmainproject/admin/addslider.dart';
-
 import '../components.dart';
-import 'admin.dart';
 
 class SliderImages extends StatefulWidget {
   const SliderImages({super.key});
@@ -56,7 +53,7 @@ class _SliderImagesState extends State<SliderImages> {
         setState(() {
           images.removeWhere((image) => image['key'] == key);
           deletingKey = null;
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Image deleted successfully")));
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Image deleted successfully")));
         });
       });
     } catch (error) {
@@ -96,7 +93,7 @@ class _SliderImagesState extends State<SliderImages> {
           )
       )
           : GridView.builder(
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
           crossAxisSpacing: 4.0,
           mainAxisSpacing: 4.0,
@@ -117,14 +114,14 @@ class _SliderImagesState extends State<SliderImages> {
                     ),
                   ),
                   if (isDeleting)
-                    Center(
+                    const Center(
                       child: CircularProgressIndicator(),
                     ),
                   Positioned(
                     top: 8,
                     right: 8,
                     child: IconButton(
-                      icon: Icon(Icons.delete, color: Colors.red),
+                      icon: const Icon(Icons.delete, color: Colors.red),
                       onPressed: () {
                         deleteImage(image['key'], image['image']);
                       },
@@ -138,10 +135,10 @@ class _SliderImagesState extends State<SliderImages> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.push(context, MaterialPageRoute(builder: (context)=>AddSlider()));
+          Navigator.push(context, MaterialPageRoute(builder: (context)=>const AddSlider()));
         },
-        child: Icon(Icons.add,color: Colors.white),
-        backgroundColor: Color(0xFFE0A45E),
+        child: const Icon(Icons.add,color: Colors.white),
+        backgroundColor: const Color(0xFFE0A45E),
       ),
     );
   }

@@ -66,7 +66,7 @@ class _CancellationRequestsPageState extends State<CancellationRequestsPage> {
 
       fetchCancellationRequests();
     } catch (e) {
-      print('Error approving cancellation request: $e');
+      // print('Error approving cancellation request: $e');
     }
   }
 
@@ -82,7 +82,7 @@ class _CancellationRequestsPageState extends State<CancellationRequestsPage> {
 
       fetchCancellationRequests();
     } catch (e) {
-      print('Error rejecting cancellation request: $e');
+      // print('Error rejecting cancellation request: $e');
     }
   }
 
@@ -91,11 +91,11 @@ class _CancellationRequestsPageState extends State<CancellationRequestsPage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Order Canceled'),
+          title: const Text('Order Canceled'),
           content: Text('Order ID: $orderId\nCancelled At: $cancellationTimestamp'),
           actions: [
             TextButton(
-              child: Text('OK'),
+              child: const Text('OK'),
               onPressed: () {
                 Navigator.pop(context);
                 Navigator.pushReplacement(
@@ -133,11 +133,11 @@ class _CancellationRequestsPageState extends State<CancellationRequestsPage> {
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Requested At: ${request['requestedAt']}', style: TextStyle(fontSize: 16)),
-                Text('Accepted At: $requestAcceptedAt', style: TextStyle(fontSize: 16, color: Colors.red)),
-                Text('Rejected At: $requestRejectedAt', style: TextStyle(fontSize: 16, color: Colors.red)),
-                SizedBox(height: 8),
-                Text('Reason: $reason', style: TextStyle(fontSize: 16, fontStyle: FontStyle.italic)),
+                Text('Requested At: ${request['requestedAt']}', style: const TextStyle(fontSize: 16)),
+                Text('Accepted At: $requestAcceptedAt', style: const TextStyle(fontSize: 16, color: Colors.red)),
+                Text('Rejected At: $requestRejectedAt', style: const TextStyle(fontSize: 16, color: Colors.red)),
+                const SizedBox(height: 8),
+                Text('Reason: $reason', style: const TextStyle(fontSize: 16, fontStyle: FontStyle.italic)),
               ],
             ),
             trailing: requestAcceptedAt == 'Not Accepted Yet' && requestRejectedAt == 'Not Rejected Yet'
@@ -145,14 +145,14 @@ class _CancellationRequestsPageState extends State<CancellationRequestsPage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 IconButton(
-                  icon: Icon(Icons.check),
+                  icon: const Icon(Icons.check),
                   onPressed: () {
                     cancelOrder(order['orderId']);
                     approveCancellationRequest(order['orderId']);
                   },
                 ),
                 IconButton(
-                  icon: Icon(Icons.close),
+                  icon: const Icon(Icons.close),
                   onPressed: () {
                     rejectCancellationRequest(order['orderId']);
                   },
@@ -163,7 +163,7 @@ class _CancellationRequestsPageState extends State<CancellationRequestsPage> {
           );
         },
       )
-          : Center(child: Text("No Cancellation Requests")),
+          : const Center(child: Text("No Cancellation Requests")),
     );
   }
 }

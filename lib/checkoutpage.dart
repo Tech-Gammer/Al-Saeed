@@ -105,9 +105,19 @@ class _CheckoutPageState extends State<CheckoutPage> with SingleTickerProviderSt
     }
   }
 
-  double calculateDeliveryCharges(){
+  // double calculateDeliveryCharges(){
+  //   double subdistance = distanceToShop! - 1;
+  //   return (subdistance * 50);
+  // }
+
+
+  double calculateDeliveryCharges() {
+    if (distanceToShop! <= 1) {
+      return 0.0; // No delivery charges if distance is 1 km or less
+    }
+
     double subdistance = distanceToShop! - 1;
-    return (subdistance * 50);
+    return subdistance * 50; // Delivery charges for distance greater than 1 km
   }
 
   Future<void> determineUserRole() async {
@@ -181,9 +191,9 @@ class _CheckoutPageState extends State<CheckoutPage> with SingleTickerProviderSt
     double total = 0.0;
     if (cartItems != null) {
       cartItems!.forEach((key, item) {
-        final rate = double.tryParse(item['rate'] as String? ?? '0') ?? 0;
+        final sale_rate = double.tryParse(item['sale_rate'] as String? ?? '0') ?? 0;
         final quantity = item['quantity'] as int? ?? 0;
-        total += rate * quantity;
+        total += sale_rate * quantity;
       });
     }
     return total;
@@ -220,7 +230,7 @@ class _CheckoutPageState extends State<CheckoutPage> with SingleTickerProviderSt
       await updateMergedOrders(mergedOrders);
 
       // Optionally, clear the cart after placing the order
-      await _cartRef.remove();
+      await _cartRef.child(currentUser.uid).remove();
 
       if(selectedPaymentMethod == 'Cash on Delivery'){
         // Show feedback dialog only after placing the order
@@ -315,6 +325,11 @@ class _CheckoutPageState extends State<CheckoutPage> with SingleTickerProviderSt
 
         await _feedbackRef.push().set(feedbackData);
       });
+    }
+    else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No cart items found to provide feedback on.')),
+      );
     }
   }
 
@@ -464,7 +479,7 @@ class _CheckoutPageState extends State<CheckoutPage> with SingleTickerProviderSt
                 final name = item['name'] as String? ?? 'No Name';
                 final imageUrl = item['imageUrl'] as String? ?? '';
                 final category = item['category'] as String? ?? 'No Category';
-                final rate = item['rate'] as String? ?? 'No Rate';
+                final sale_rate = item['sale_rate'] as String? ?? 'No Rate';
                 final quantity = item['quantity'] as int? ?? 0;
                 final description = item['description'] as String? ?? 'No description';
                 deliveryCharges = calculateDeliveryCharges();
@@ -479,7 +494,7 @@ class _CheckoutPageState extends State<CheckoutPage> with SingleTickerProviderSt
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text("Category: $category", style: GoogleFonts.lora(fontSize: 14)),
-                        Text("Rate: $rate", style: GoogleFonts.lora(fontSize: 14)),
+                        Text("Rate: $sale_rate", style: GoogleFonts.lora(fontSize: 14)),
                         Text("Quantity: $quantity", style: GoogleFonts.lora(fontSize: 14)),
                         Text("Description: $description", style: GoogleFonts.lora(fontSize: 14)),
                       ],

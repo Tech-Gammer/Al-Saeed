@@ -125,7 +125,12 @@ class _FrontPageState extends State<FrontPage> {
           final itemDataString = {
             'item_name': itemData['item_name']?.toString() ?? 'No Name',
             'category': itemData['category']?.toString() ?? 'No Category',
-            'rate': itemData['rate']?.toString() ?? 'No Rate',
+            'net_rate': itemData['net_rate']?.toString() ?? 'No Rate',
+            'item_qty': itemData['item_qty']?.toString() ?? 'No Quantity',
+            'unit': itemData['unit']?.toString() ?? 'No unit',
+
+            'ptc_code': itemData['ptc_code']?.toString() ?? 'No Rate',
+            'barcode': itemData['barcode']?.toString() ?? 'No Rate',
             'description': itemData['description']?.toString() ?? 'No description',
             'image': itemData['image']?.toString() ?? '',
             'adminId': itemData['adminId']?.toString() ?? '',
@@ -180,7 +185,7 @@ class _FrontPageState extends State<FrontPage> {
   }
 
   void _checkIfLoadingComplete() {
-    Future.delayed(const Duration(seconds: 5), () {
+    Future.delayed(const Duration(seconds: 2), () {
       setState(() {
         _isLoading = false;
       });
@@ -203,9 +208,452 @@ class _FrontPageState extends State<FrontPage> {
   }
 
   @override
+  // Widget build(BuildContext context) {
+  //   final isSearching = searchQuery.isNotEmpty;
+  //   double rating;
+  //
+  //   return SafeArea(
+  //     child: Scaffold(
+  //       key: _globalKey,
+  //       drawer: const Drawerfrontside(),
+  //       appBar: AppBar(
+  //         flexibleSpace: Image(
+  //           image: const AssetImage('images/art.jpg'),
+  //           color: Colors.white.withOpacity(0.5), colorBlendMode: BlendMode.modulate,
+  //           fit: BoxFit.cover,
+  //         ),
+  //
+  //         title: SizedBox(
+  //           width: 100,
+  //           height: 70,
+  //           child: Image.asset("images/logomain.png"),
+  //         ),
+  //         centerTitle: true,
+  //         actions: [
+  //           PopupMenuButton(
+  //             icon: currentUser == null ? const Icon(Icons.login) : const Icon(Icons.person_rounded),
+  //             itemBuilder: (BuildContext context) {
+  //               return [
+  //                 if (currentUser != null)
+  //                   PopupMenuItem(
+  //                     onTap: () {
+  //                       Navigator.push(context, MaterialPageRoute(builder: (context) => UserProfile()));
+  //                     },
+  //                     child: const Row(
+  //                       children: [
+  //                         Icon(Icons.person),
+  //                         Text("       Profile"),
+  //                       ],
+  //                     ),
+  //                   ),
+  //                 PopupMenuItem(
+  //                   onTap: () {
+  //                     if (currentUser == null) {
+  //                       Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const LoginPage()));
+  //                     } else {
+  //                       signOut();
+  //                     }
+  //                   },
+  //                   child: Row(
+  //                     children: [
+  //                       Icon(currentUser == null ? Icons.login : Icons.logout),
+  //                       Text(currentUser == null ? "       Log In" : "       Log Out"),
+  //                     ],
+  //                   ),
+  //                 ),
+  //                 if (currentUser != null)
+  //                   PopupMenuItem(
+  //                     onTap: () {
+  //                       Navigator.push(context, MaterialPageRoute(builder: (context) => CustomerOrdersPage(comingFromCheckoutPage: false)));
+  //                     },
+  //                     child: const Row(
+  //                       children: [
+  //                         Icon(Icons.shopping_cart),
+  //                         Text("       Orders"),
+  //                       ],
+  //                     ),
+  //                   ),
+  //               ];
+  //             },
+  //           ),
+  //           Padding(
+  //             padding: const EdgeInsets.only(right: 10),
+  //             child: Stack(
+  //               clipBehavior: Clip.none,
+  //               children: [
+  //                 IconButton(
+  //                   icon: const Icon(Icons.shopping_basket),
+  //                   onPressed: () {
+  //                     if (currentUser == null) {
+  //                       Navigator.push(context, MaterialPageRoute(builder: (context) => const LoginPage()));
+  //                     } else {
+  //                       Navigator.push(context, MaterialPageRoute(builder: (context) => CartPage()));
+  //                     }
+  //                   },
+  //                 ),
+  //                 if (_cartItemCount > 0)
+  //                   Positioned(
+  //                     right: 5,
+  //                     top: 8,
+  //                     child: CircleAvatar(
+  //                       radius: 8.0,
+  //                       backgroundColor: Colors.red,
+  //                       foregroundColor: Colors.white,
+  //                       child: Text(
+  //                         _cartItemCount.toString(),
+  //                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.0),
+  //                       ),
+  //                     ),
+  //                   ),
+  //               ],
+  //             ),
+  //           ),
+  //         ],
+  //       ),
+  //       body: _isLoading
+  //           ? CustomLoader()
+  //           : SingleChildScrollView(
+  //         child: Container(
+  //           decoration: BoxDecoration(
+  //             image: DecorationImage(
+  //               image: const AssetImage("images/art.jpg"),
+  //               fit: BoxFit.fitHeight,
+  //               colorFilter: ColorFilter.mode(
+  //                 Colors.black.withOpacity(0.2), // Adjust opacity here
+  //                 BlendMode.dstATop,
+  //               ),
+  //             ),
+  //           ),
+  //           child: Column(
+  //             children: [
+  //               const SizedBox(height:6),
+  //               Padding(
+  //                 padding: const EdgeInsets.symmetric(horizontal: 10),
+  //                 child: SizedBox(
+  //                   height: 50,
+  //                   child: TextField(
+  //                     controller: _controller,
+  //                     decoration: InputDecoration(
+  //                       suffixIcon: IconButton(
+  //                         icon: const Icon(Icons.search),
+  //                         onPressed: () {
+  //                           _filterItems(_controller.text);
+  //                         },
+  //                       ),
+  //                       hintText: 'Search',
+  //                       filled: true,
+  //                       fillColor: const Color(0xFFe6b67e).withOpacity(0.2),
+  //                       enabledBorder: OutlineInputBorder(
+  //                         borderRadius: BorderRadius.circular(10),
+  //                         borderSide: const BorderSide(color: Color(0xFFe6b67e)),
+  //                       ),
+  //                       focusedBorder: OutlineInputBorder(
+  //                         borderRadius: BorderRadius.circular(10),
+  //                         borderSide: const BorderSide(color: Color(0xFFe6b67e)),
+  //                       ),
+  //                     ),
+  //                     onChanged: _filterItems,
+  //                   ),
+  //                 ),
+  //               ),
+  //               Visibility(
+  //                 visible: !isSearching,
+  //                 child: Column(
+  //                   children: [
+  //                     const SizedBox(height: 10),
+  //                     Stack(
+  //                       children: [
+  //                         InkWell(
+  //                           onTap: () {
+  //                             print(_currentIndex);
+  //                           },
+  //                           child: CarouselSlider(
+  //                             items: sliderImages
+  //                                 .map((imageUrl) => Image.network(
+  //                               imageUrl,
+  //                               fit: BoxFit.fitHeight,
+  //                               width: double.infinity,
+  //                               errorBuilder: (context, error, stackTrace) {
+  //                                 return const Icon(Icons.image_not_supported, size: 300);
+  //                               },
+  //                             ))
+  //                                 .toList(),
+  //                             carouselController: _carouselController,
+  //                             options: CarouselOptions(
+  //                               scrollPhysics: const BouncingScrollPhysics(),
+  //                               autoPlay: true,
+  //                               aspectRatio: 2,
+  //                               viewportFraction: 1,
+  //                               onPageChanged: (index, reason) {
+  //                                 setState(() {
+  //                                   _currentIndex = index;
+  //                                 });
+  //                               },
+  //                             ),
+  //                           ),
+  //                         ),
+  //                         Positioned(
+  //                           bottom: 0,
+  //                           left: 0,
+  //                           right: 0,
+  //                           child: Row(
+  //                             mainAxisAlignment: MainAxisAlignment.center,
+  //                             children: sliderImages.asMap().entries.map((entry) {
+  //                               return GestureDetector(
+  //                                 onTap: () => _carouselController.animateToPage(entry.key),
+  //                                 child: Container(
+  //                                   width: _currentIndex == entry.key ? 17 : 7,
+  //                                   height: 7.0,
+  //                                   margin: const EdgeInsets.symmetric(horizontal: 3.0),
+  //                                   decoration: BoxDecoration(
+  //                                     borderRadius: BorderRadius.circular(10),
+  //                                     color: _currentIndex == entry.key ? Colors.brown : Colors.grey,
+  //                                   ),
+  //                                 ),
+  //                               );
+  //                             }).toList(),
+  //                           ),
+  //                         ),
+  //                       ],
+  //                     ),
+  //                     const SizedBox(height: 10),
+  //                     Text(
+  //                       "We Provide Fresh Items",
+  //                       style: GoogleFonts.berkshireSwash(
+  //                         fontSize: 30,
+  //                         color: Colors.brown,
+  //                       ),
+  //                     ),
+  //                     const SizedBox(height: 10),
+  //                     Padding(
+  //                       padding: const EdgeInsets.all(8.0),
+  //                       child: Column(
+  //                         children: [
+  //                           Row(
+  //                             mainAxisAlignment: MainAxisAlignment.center,
+  //                             children: [
+  //                               _buildCategoryIcon(Icons.cookie, "Sweets", "sweets"),
+  //                               const SizedBox(width: 15),
+  //                               _buildCategoryIcon(Icons.local_pizza, "Pizza", "pizza"),
+  //                               const SizedBox(width: 15),
+  //                               _buildCategoryIcon(Icons.icecream, "Icecream", "icecream"),
+  //                               const SizedBox(width: 15),
+  //                             ],
+  //                           ),
+  //                         ],
+  //                       ),
+  //                     ),
+  //                     const SizedBox(height: 10),
+  //                     Text(
+  //                       "Available Items",
+  //                       style: GoogleFonts.berkshireSwash(
+  //                         fontSize: 24,
+  //                         color: Colors.brown,
+  //                       ),
+  //                     ),
+  //                     const SizedBox(height: 10),
+  //                   ],
+  //                 ),
+  //               ),
+  //               Padding(
+  //                 padding: const EdgeInsets.all(8.0),
+  //                 child: Column(
+  //                   children: [
+  //
+  //                     const SizedBox(height: 16),
+  //                     FutureBuilder<Map<String, dynamic>>(
+  //                       future: fetchData(),
+  //                       builder: (context, snapshot) {
+  //                         if (snapshot.connectionState == ConnectionState.active) {
+  //                           return const Center(child: CircularProgressIndicator());
+  //                         } else if (snapshot.hasError) {
+  //                           return Center(child: Text('Error fetching data: ${snapshot.error}'));
+  //                         } else if (snapshot.hasData) {
+  //                           final Map<String, dynamic> itemsMap = snapshot.data!;
+  //                           final filteredItems = itemsMap.entries.where((entry) {
+  //                             final item = entry.value;
+  //                             return item['item_name'].toString().toLowerCase().contains(searchQuery);
+  //                           }).toList();
+  //
+  //                           return GridView.builder(
+  //                             shrinkWrap: true,
+  //                             physics: const NeverScrollableScrollPhysics(),
+  //                             padding: const EdgeInsets.all(8.0),
+  //                             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+  //                               crossAxisCount: 2,
+  //                               crossAxisSpacing: 16.0,
+  //                               mainAxisSpacing: 16.0,
+  //                               childAspectRatio: 0.6,
+  //                             ),
+  //                             itemCount: filteredItems.length,
+  //                             itemBuilder: (context, index) {
+  //                               final item = filteredItems[index].value;
+  //                               final imageUrl = item['image'] as String?;
+  //                               final item_name = item['item_name'] as String? ?? 'No Name';
+  //                               final category = item['category'] as String? ?? 'No Category';
+  //                               final rate = item['rate'] as String? ?? 'No Rate';
+  //                               final description = item['description'] as String? ?? 'No description';
+  //                               final adminId = item['adminId'] as String? ?? 'No adminId';
+  //                               final itemId = filteredItems[index].key;
+  //
+  //                               return FutureBuilder<double>(
+  //                                 future: fetchRating(itemId),
+  //                                 builder: (context, snapshot) {
+  //                                   rating = snapshot.data ?? 3.0;
+  //                                   return imageUrl != null && imageUrl.isNotEmpty
+  //                                       ? GestureDetector(
+  //                                     onTap: () {
+  //                                       Navigator.push(
+  //                                         context,
+  //                                         MaterialPageRoute(
+  //                                           builder: (context) => ItemSelectPage(
+  //                                             item_name: item_name,
+  //                                             imageUrl: imageUrl,
+  //                                             category: category,
+  //                                             rate: rate,
+  //                                             description: description,
+  //                                             itemId: itemId,
+  //                                             adminId: adminId,
+  //                                           ),
+  //                                         ),
+  //                                       );
+  //                                     },
+  //                                     child: Stack(
+  //                                       children: [
+  //                                         Card(
+  //                                           elevation: 5,
+  //                                           child: Column(
+  //                                             mainAxisAlignment: MainAxisAlignment.center,
+  //                                             children: [
+  //                                               SizedBox(
+  //                                                 height: 120,
+  //                                                 width: 120,
+  //                                                 child: CircleAvatar(
+  //                                                   radius: 70,
+  //                                                   backgroundImage: NetworkImage(imageUrl),
+  //                                                 ),
+  //                                               ),
+  //                                               const SizedBox(height: 8),
+  //                                               Center(
+  //                                                 child: Padding(
+  //                                                   padding: const EdgeInsets.symmetric(horizontal: 5),
+  //                                                   child: Text(
+  //                                                     item_name,
+  //                                                     style: GoogleFonts.lora(
+  //                                                       textStyle: const TextStyle(fontSize: 18, color: Colors.brown, fontWeight: FontWeight.bold),
+  //                                                     ),
+  //                                                     maxLines: 2,
+  //                                                     textAlign: TextAlign.center,
+  //                                                   ),
+  //                                                 ),
+  //                                               ),
+  //                                               Text(
+  //                                                 category,
+  //                                                 style: GoogleFonts.lora(
+  //                                                   textStyle: const TextStyle(fontSize: 14, color: Colors.brown),
+  //                                                 ),
+  //                                               ),
+  //                                               Text(
+  //                                                 "Rs $rate",
+  //                                                 style: GoogleFonts.lora(
+  //                                                   textStyle: const TextStyle(fontSize: 14, color: Colors.brown),
+  //                                                 ),
+  //                                               ),
+  //                                               const SizedBox(height: 8),
+  //                                               RatingBar.builder(
+  //                                                 ignoreGestures: true,
+  //                                                 itemSize: 25,
+  //                                                 initialRating: rating,
+  //                                                 minRating: 1,
+  //                                                 direction: Axis.horizontal,
+  //                                                 allowHalfRating: true,
+  //                                                 itemCount: 5,
+  //                                                 itemBuilder: (context, _) => const Icon(
+  //                                                   Icons.star,
+  //                                                   color: Colors.amber,
+  //                                                 ),
+  //                                                 onRatingUpdate: (newRating) {
+  //                                                   // Optional: handle rating update if needed
+  //                                                 },
+  //                                               ),
+  //                                               const SizedBox(height: 8),
+  //                                             ],
+  //                                           ),
+  //                                         ),
+  //                                         Positioned(
+  //                                           top: 10,
+  //                                           right: 10,
+  //                                           child: GestureDetector(
+  //                                             onTap: () {
+  //                                               Navigator.push(
+  //                                                 context,
+  //                                                 MaterialPageRoute(
+  //                                                   builder: (context) => ItemSelectPage(
+  //                                                     item_name: item_name,
+  //                                                     imageUrl: imageUrl,
+  //                                                     category: category,
+  //                                                     rate: rate,
+  //                                                     description: description,
+  //                                                     itemId: itemId,
+  //                                                     adminId: adminId,
+  //                                                   ),
+  //                                                 ),
+  //                                               );
+  //                                             },
+  //                                             child: Container(
+  //                                               padding: const EdgeInsets.all(8),
+  //                                               decoration: const BoxDecoration(
+  //                                                 color: Colors.orange,
+  //                                                 shape: BoxShape.circle,
+  //                                                 boxShadow: [
+  //                                                   BoxShadow(
+  //                                                     color: Colors.black26,
+  //                                                     offset: Offset(2, 2),
+  //                                                     blurRadius: 4,
+  //                                                   ),
+  //                                                 ],
+  //                                               ),
+  //                                               child: const Icon(
+  //                                                 Icons.shopping_basket,
+  //                                                 color: Colors.white,
+  //                                                 size: 24,
+  //                                               ),
+  //                                             ),
+  //                                           ),
+  //                                         ),
+  //                                       ],
+  //                                     ),
+  //
+  //                                   )
+  //                                       : const SizedBox.shrink();
+  //                                 },
+  //                               );
+  //                             },
+  //                           );
+  //                         } else {
+  //                           return const CircularProgressIndicator();
+  //                         }
+  //                       },
+  //                     ),
+  //                   ],
+  //                 ),
+  //               ),
+  //               _buildFooter(),
+  //             ],
+  //           ),
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
+
   Widget build(BuildContext context) {
     final isSearching = searchQuery.isNotEmpty;
     double rating;
+
+    // Use MediaQuery to get screen size
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
 
     return SafeArea(
       child: Scaffold(
@@ -214,19 +662,21 @@ class _FrontPageState extends State<FrontPage> {
         appBar: AppBar(
           flexibleSpace: Image(
             image: const AssetImage('images/art.jpg'),
-            color: Colors.white.withOpacity(0.5), colorBlendMode: BlendMode.modulate,
+            color: Colors.white.withOpacity(0.5),
+            colorBlendMode: BlendMode.modulate,
             fit: BoxFit.cover,
           ),
-
           title: SizedBox(
-            width: 100,
-            height: 70,
+            width: screenWidth * 0.25, // Adjusted width based on screen size
+            height: screenHeight * 0.1, // Adjusted height based on screen size
             child: Image.asset("images/logomain.png"),
           ),
           centerTitle: true,
           actions: [
             PopupMenuButton(
-              icon: currentUser == null ? const Icon(Icons.login) : const Icon(Icons.person_rounded),
+              icon: currentUser == null
+                  ? const Icon(Icons.login)
+                  : const Icon(Icons.person_rounded),
               itemBuilder: (BuildContext context) {
                 return [
                   if (currentUser != null)
@@ -259,7 +709,12 @@ class _FrontPageState extends State<FrontPage> {
                   if (currentUser != null)
                     PopupMenuItem(
                       onTap: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (context) => CustomerOrdersPage(comingFromCheckoutPage: false)));
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => CustomerOrdersPage(
+                                  comingFromCheckoutPage: false,
+                                )));
                       },
                       child: const Row(
                         children: [
@@ -272,7 +727,7 @@ class _FrontPageState extends State<FrontPage> {
               },
             ),
             Padding(
-              padding: const EdgeInsets.only(right: 10),
+              padding: EdgeInsets.only(right: screenWidth * 0.025), // Responsive padding
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
@@ -291,12 +746,12 @@ class _FrontPageState extends State<FrontPage> {
                       right: 5,
                       top: 8,
                       child: CircleAvatar(
-                        radius: 8.0,
+                        radius: screenWidth * 0.02, // Responsive radius
                         backgroundColor: Colors.red,
                         foregroundColor: Colors.white,
                         child: Text(
                           _cartItemCount.toString(),
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.0),
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: screenWidth * 0.03), // Responsive font size
                         ),
                       ),
                     ),
@@ -321,11 +776,11 @@ class _FrontPageState extends State<FrontPage> {
             ),
             child: Column(
               children: [
-                const SizedBox(height:6),
+                const SizedBox(height: 6),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.025), // Responsive padding
                   child: SizedBox(
-                    height: 50,
+                    height: screenHeight * 0.06, // Responsive height
                     child: TextField(
                       controller: _controller,
                       decoration: InputDecoration(
@@ -397,9 +852,9 @@ class _FrontPageState extends State<FrontPage> {
                                 return GestureDetector(
                                   onTap: () => _carouselController.animateToPage(entry.key),
                                   child: Container(
-                                    width: _currentIndex == entry.key ? 17 : 7,
-                                    height: 7.0,
-                                    margin: const EdgeInsets.symmetric(horizontal: 3.0),
+                                    width: _currentIndex == entry.key ? screenWidth * 0.045 : screenWidth * 0.018, // Responsive width
+                                    height: screenHeight * 0.01, // Responsive height
+                                    margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.008), // Responsive margin
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(10),
                                       color: _currentIndex == entry.key ? Colors.brown : Colors.grey,
@@ -415,24 +870,23 @@ class _FrontPageState extends State<FrontPage> {
                       Text(
                         "We Provide Fresh Items",
                         style: GoogleFonts.berkshireSwash(
-                          fontSize: 30,
+                          fontSize: screenWidth * 0.08, // Responsive font size
                           color: Colors.brown,
                         ),
                       ),
                       const SizedBox(height: 10),
                       Padding(
-                        padding: const EdgeInsets.all(8.0),
+                        padding: EdgeInsets.all(screenWidth * 0.02), // Responsive padding
                         child: Column(
                           children: [
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 _buildCategoryIcon(Icons.cookie, "Sweets", "sweets"),
-                                const SizedBox(width: 15),
+                                SizedBox(width: screenWidth * 0.04), // Responsive spacing
                                 _buildCategoryIcon(Icons.local_pizza, "Pizza", "pizza"),
-                                const SizedBox(width: 15),
+                                SizedBox(width: screenWidth * 0.04),
                                 _buildCategoryIcon(Icons.icecream, "Icecream", "icecream"),
-                                const SizedBox(width: 15),
                               ],
                             ),
                           ],
@@ -442,7 +896,7 @@ class _FrontPageState extends State<FrontPage> {
                       Text(
                         "Available Items",
                         style: GoogleFonts.berkshireSwash(
-                          fontSize: 24,
+                          fontSize: screenWidth * 0.06, // Responsive font size
                           color: Colors.brown,
                         ),
                       ),
@@ -451,10 +905,9 @@ class _FrontPageState extends State<FrontPage> {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.all(8.0),
+                  padding: EdgeInsets.all(screenWidth * 0.02), // Responsive padding
                   child: Column(
                     children: [
-
                       const SizedBox(height: 16),
                       FutureBuilder<Map<String, dynamic>>(
                         future: fetchData(),
@@ -473,11 +926,11 @@ class _FrontPageState extends State<FrontPage> {
                             return GridView.builder(
                               shrinkWrap: true,
                               physics: const NeverScrollableScrollPhysics(),
-                              padding: const EdgeInsets.all(8.0),
-                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              padding: EdgeInsets.all(screenWidth * 0.02), // Responsive padding
+                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                                 crossAxisCount: 2,
-                                crossAxisSpacing: 16.0,
-                                mainAxisSpacing: 16.0,
+                                crossAxisSpacing: screenWidth * 0.04, // Responsive spacing
+                                mainAxisSpacing: screenWidth * 0.04,
                                 childAspectRatio: 0.6,
                               ),
                               itemCount: filteredItems.length,
@@ -486,7 +939,12 @@ class _FrontPageState extends State<FrontPage> {
                                 final imageUrl = item['image'] as String?;
                                 final item_name = item['item_name'] as String? ?? 'No Name';
                                 final category = item['category'] as String? ?? 'No Category';
-                                final rate = item['rate'] as String? ?? 'No Rate';
+                                final net_rate = item['net_rate'] as String? ?? 'No Rate';
+                                final item_qty = item['item_qty'] as String? ?? 'No item_qty';
+                                final unit = item['unit'] as String? ?? 'No unit';
+
+                                final barcode = item['barcode'] as String? ?? 'No barcode';
+                                final ptc_code = item['ptc_code'] as String? ?? 'No barcode';
                                 final description = item['description'] as String? ?? 'No description';
                                 final adminId = item['adminId'] as String? ?? 'No adminId';
                                 final itemId = filteredItems[index].key;
@@ -505,10 +963,14 @@ class _FrontPageState extends State<FrontPage> {
                                               item_name: item_name,
                                               imageUrl: imageUrl,
                                               category: category,
-                                              rate: rate,
+                                                item_qty:item_qty,
+                                                net_rate: net_rate,
                                               description: description,
                                               itemId: itemId,
+                                              unit: unit,
                                               adminId: adminId,
+                                              barcode: barcode,
+                                              ptc_code: ptc_code
                                             ),
                                           ),
                                         );
@@ -521,21 +983,24 @@ class _FrontPageState extends State<FrontPage> {
                                               mainAxisAlignment: MainAxisAlignment.center,
                                               children: [
                                                 SizedBox(
-                                                  height: 120,
-                                                  width: 120,
+                                                  height: screenHeight * 0.15, // Responsive height
+                                                  width: screenWidth * 0.3, // Responsive width
                                                   child: CircleAvatar(
-                                                    radius: 70,
+                                                    radius: screenWidth * 0.18, // Responsive radius
                                                     backgroundImage: NetworkImage(imageUrl),
                                                   ),
                                                 ),
-                                                const SizedBox(height: 8),
+                                                const SizedBox(height: 5),
                                                 Center(
                                                   child: Padding(
-                                                    padding: const EdgeInsets.symmetric(horizontal: 5),
+                                                    padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.01), // Responsive padding
                                                     child: Text(
                                                       item_name,
                                                       style: GoogleFonts.lora(
-                                                        textStyle: const TextStyle(fontSize: 18, color: Colors.brown, fontWeight: FontWeight.bold),
+                                                        textStyle: TextStyle(
+                                                            fontSize: screenWidth * 0.045,
+                                                            color: Colors.brown,
+                                                            fontWeight: FontWeight.bold), // Responsive font size
                                                       ),
                                                       maxLines: 2,
                                                       textAlign: TextAlign.center,
@@ -545,19 +1010,25 @@ class _FrontPageState extends State<FrontPage> {
                                                 Text(
                                                   category,
                                                   style: GoogleFonts.lora(
-                                                    textStyle: const TextStyle(fontSize: 14, color: Colors.brown),
+                                                    textStyle: TextStyle(fontSize: screenWidth * 0.035, color: Colors.brown), // Responsive font size
                                                   ),
                                                 ),
                                                 Text(
-                                                  "Rs $rate",
+                                                  "Rs $net_rate",
                                                   style: GoogleFonts.lora(
-                                                    textStyle: const TextStyle(fontSize: 14, color: Colors.brown),
+                                                    textStyle: TextStyle(fontSize: screenWidth * 0.035, color: Colors.brown), // Responsive font size
                                                   ),
                                                 ),
-                                                const SizedBox(height: 8),
+                                                Text(
+                                                  "Quantity $item_qty",
+                                                  style: GoogleFonts.lora(
+                                                    textStyle: TextStyle(fontSize: screenWidth * 0.035, color: Colors.brown), // Responsive font size
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 5),
                                                 RatingBar.builder(
                                                   ignoreGestures: true,
-                                                  itemSize: 25,
+                                                  itemSize: screenWidth * 0.065, // Responsive item size
                                                   initialRating: rating,
                                                   minRating: 1,
                                                   direction: Axis.horizontal,
@@ -571,13 +1042,13 @@ class _FrontPageState extends State<FrontPage> {
                                                     // Optional: handle rating update if needed
                                                   },
                                                 ),
-                                                const SizedBox(height: 8),
+                                                const SizedBox(height: 5),
                                               ],
                                             ),
                                           ),
                                           Positioned(
-                                            top: 10,
-                                            right: 10,
+                                            top: screenHeight * 0.01,
+                                            right: screenWidth * 0.03,
                                             child: GestureDetector(
                                               onTap: () {
                                                 Navigator.push(
@@ -587,16 +1058,20 @@ class _FrontPageState extends State<FrontPage> {
                                                       item_name: item_name,
                                                       imageUrl: imageUrl,
                                                       category: category,
-                                                      rate: rate,
+                                                        item_qty:item_qty,
+                                                        unit: unit,
+                                                        net_rate: net_rate,
                                                       description: description,
                                                       itemId: itemId,
                                                       adminId: adminId,
+                                                        barcode: barcode,
+                                                        ptc_code: ptc_code
                                                     ),
                                                   ),
                                                 );
                                               },
                                               child: Container(
-                                                padding: const EdgeInsets.all(8),
+                                                padding: EdgeInsets.all(screenWidth * 0.02), // Responsive padding
                                                 decoration: const BoxDecoration(
                                                   color: Colors.orange,
                                                   shape: BoxShape.circle,
@@ -618,7 +1093,6 @@ class _FrontPageState extends State<FrontPage> {
                                           ),
                                         ],
                                       ),
-
                                     )
                                         : const SizedBox.shrink();
                                   },
@@ -641,6 +1115,7 @@ class _FrontPageState extends State<FrontPage> {
       ),
     );
   }
+
 
   Widget _buildCategoryIcon(IconData icon, String label, String category) {
     return GestureDetector(

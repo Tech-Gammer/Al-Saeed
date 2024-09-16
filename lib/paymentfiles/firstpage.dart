@@ -81,8 +81,11 @@ class _firstpageState extends State<firstpage> {
   }
 
   Future<void> fetchCartItems() async {
-    final userCartRef = _cartRef;
-    final snapshot = await userCartRef.orderByChild('uid').equalTo(currentUser.uid).once();
+    String userId = currentUser.uid;
+    final userCartRef = _cartRef.child(userId); // Reference to the current user's cart
+    final snapshot = await userCartRef.once(); // Get all cart items for the user
+    // final userCartRef = _cartRef;
+    // final snapshot = await userCartRef.orderByChild('uid').equalTo(currentUser.uid).once();
     if (snapshot.snapshot.value != null) {
       setState(() {
         cartItems = Map<String, dynamic>.from(snapshot.snapshot.value as Map);
@@ -93,6 +96,7 @@ class _firstpageState extends State<firstpage> {
       });
     }
   }
+
 
   Future<void> initPaymentSheet() async {
     try {
@@ -132,6 +136,7 @@ class _firstpageState extends State<firstpage> {
       rethrow;
     }
   }
+
   Future<void> _savePaymentDetails(String orderId) async {
   try {
     final orderRef = _ordersRef.child(orderId);
@@ -246,11 +251,11 @@ class _firstpageState extends State<firstpage> {
     );
   }
 
-  Future<void> saveFeedback(String orderId, double rating, String feedback,String userId) async {
-    if (cartItems != null) {
+  Future<void> saveFeedback(String orderId, double rating, String feedback, String userId) async {
+    if (cartItems != null && cartItems!.isNotEmpty) {
       cartItems!.forEach((key, item) async {
-        final itemId = item['itemId'];
-        final adminId = item['adminId'] as String? ?? 'unknownAdminId';
+        final itemId = item['itemId'] ?? 'unknownItemId';  // Handle potential missing fields
+        final adminId = item['adminId'] as String? ?? 'unknownAdminId'; // Ensure `adminId` exists
         final feedbackData = {
           'orderId': orderId,
           'itemId': itemId,
@@ -261,8 +266,22 @@ class _firstpageState extends State<firstpage> {
           'userId': userId
         };
 
-        await _feedbackRef.push().set(feedbackData);
+        // Push feedback to the Feedback node
+        try {
+          await _feedbackRef.push().set(feedbackData);
+          print("Feedback saved successfully for $itemId");
+        } catch (e) {
+          print("Failed to save feedback for $itemId: $e");
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to save feedback: $e')),
+          );
+        }
       });
+    }
+    else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No cart items found to provide feedback on.')),
+      );
     }
   }
 

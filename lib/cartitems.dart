@@ -78,18 +78,83 @@ class _CartPageState extends State<CartPage> {
     }
   }
 
+  // Future<void> deleteCartItem(String itemId) async {
+  //   if (currentUser != null) {
+  //     try {
+  //       // Reference to the current user's cart
+  //       String userId = currentUser.uid;
+  //       final userCartRef = _cartRef.child(userId);
+  //
+  //       // Query to find the item with the given itemId
+  //       Query cartQuery = userCartRef.orderByChild('itemId').equalTo(itemId);
+  //       DatabaseEvent event = await cartQuery.once();
+  //       DataSnapshot snapshot = event.snapshot;
+  //
+  //       if (snapshot.exists) {
+  //         Map<dynamic, dynamic> items = snapshot.value as Map<dynamic, dynamic>;
+  //
+  //         // Loop through the items and delete each
+  //         for (var key in items.keys) {
+  //           await userCartRef.child(key).remove();
+  //         }
+  //
+  //         ScaffoldMessenger.of(context).showSnackBar(
+  //           const SnackBar(content: Text("Item removed from cart!")),
+  //         );
+  //
+  //         // Refresh cart items
+  //         await fetchCartItems();
+  //       } else {
+  //         ScaffoldMessenger.of(context).showSnackBar(
+  //           const SnackBar(content: Text("Item not found in cart.")),
+  //         );
+  //       }
+  //     } catch (error) {
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         SnackBar(content: Text("Error: $error")),
+  //       );
+  //       print(error);
+  //     }
+  //   }
+  // }
+
+
   Future<void> deleteCartItem(String itemId) async {
     if (currentUser != null) {
-      Query cartQuery = _cartRef.orderByChild('itemId').equalTo(itemId);
-
       try {
+        // Reference to the current user's cart
+        String userId = currentUser.uid;
+        final userCartRef = _cartRef.child(userId);
+
+        // Query to find the item with the given itemId
+        Query cartQuery = userCartRef.orderByChild('itemId').equalTo(itemId);
         DatabaseEvent event = await cartQuery.once();
         DataSnapshot snapshot = event.snapshot;
 
         if (snapshot.exists) {
           Map<dynamic, dynamic> items = snapshot.value as Map<dynamic, dynamic>;
+
+          // Loop through the items and delete each
           for (var key in items.keys) {
-            await _cartRef.child(key).remove();
+            final item = items[key];
+            final quantity = int.tryParse(item['item_qty'].toString()) ?? 0;
+
+            // Reference to the items node
+            final itemRef = FirebaseDatabase.instance.ref('items').child(itemId);
+
+            // Fetch current item data
+            final itemSnapshot = await itemRef.once();
+            if (itemSnapshot.snapshot.exists) {
+              final itemData = Map<String, dynamic>.from(itemSnapshot.snapshot.value as Map);
+              final currentQty = int.tryParse(itemData['quantity'].toString()) ?? 0;
+              final newQty = currentQty + quantity;
+
+              // Update the item quantity in the items node
+              await itemRef.update({'item_qty': newQty});
+            }
+
+            // Remove the item from the cart
+            await userCartRef.child(key).remove();
           }
 
           ScaffoldMessenger.of(context).showSnackBar(
@@ -112,13 +177,15 @@ class _CartPageState extends State<CartPage> {
     }
   }
 
+
+
   double calculateTotalBalance() {
     double total = 0.0;
     if (cartItems != null) {
       cartItems!.forEach((key, item) {
-        final rate = double.tryParse(item['rate'] as String? ?? '0') ?? 0;
+        final sale_rate = double.tryParse(item['sale_rate'] as String? ?? '0') ?? 0;
         final quantity = item['quantity'] as int? ?? 0;
-        total += rate * quantity;
+        total += sale_rate * quantity;
       });
     }
     return total;
@@ -213,7 +280,7 @@ class _CartPageState extends State<CartPage> {
                 final name = item['name'] as String? ?? 'No Name';
                 final imageUrl = item['imageUrl'] as String? ?? '';
                 final category = item['category'] as String? ?? 'No Category';
-                final rate = item['rate'] as String? ?? 'No Rate';
+                final sale_rate = item['sale_rate'] as String? ?? 'No Rate';
                 final description = item['description'] as String? ?? 'No description';
 
 
@@ -228,7 +295,7 @@ class _CartPageState extends State<CartPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text("Category: $category", style: GoogleFonts.lora(fontSize: 14)),
-                      Text("Rate: $rate", style: GoogleFonts.lora(fontSize: 14)),
+                      Text("Rate: $sale_rate", style: GoogleFonts.lora(fontSize: 14)),
                       Text("Quantity: $quantity", style: GoogleFonts.lora(fontSize: 14)),
                       // Text("Description: $description", style: GoogleFonts.lora(fontSize: 14)),
                       // Text("itemId: $itemId", style: GoogleFonts.lora(fontSize: 14)),

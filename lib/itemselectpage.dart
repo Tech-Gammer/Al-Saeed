@@ -15,14 +15,22 @@
     final String item_name;
     final String imageUrl;
     final String category;
-    final String rate;
+    final String item_qty;
+    final String net_rate;
+    final String barcode;
+    final String ptc_code;
+    final String unit;
     final String description;
 
     const ItemSelectPage({
       Key? key,
       required this.imageUrl,
       required this.category,
-      required this.rate,
+      required this.net_rate,
+      required this.item_qty,
+      required this.unit,
+      required this.ptc_code,
+      required this.barcode,
       required this.description,
       required this.itemId,
       required this.adminId,
@@ -43,14 +51,16 @@
     bool _isAddingToCart = false;
     List<dynamic> feedback = [];
     Map<String, dynamic> userData = {};
-    int quantity = 1;
+    int quantity = 0;
     int _cartItemCount = 0;
+    int currentQty = 0;
 
 
 
     @override
     void initState() {
       super.initState();
+      currentQty = int.parse(widget.item_qty); // Initialize currentQty with item_qty
       fetchCartItemCount();
     }
 
@@ -127,74 +137,6 @@
     }
 
 
-    // void addToCart() async {
-    //   if (_isAddingToCart) return; // Prevent multiple presses
-    //   _isAddingToCart = true;
-    //
-    //   try {
-    //     if (currentUser == null) {
-    //       ScaffoldMessenger.of(context).showSnackBar(
-    //         SnackBar(content: Text("Please login to add items to the cart.")),
-    //       );
-    //       _isAddingToCart = false;
-    //       return;
-    //     }
-    //
-    //     String userId = currentUser!.uid;
-    //     DatabaseReference userCartRef = cartRef;
-    //
-    //     final snapshot = await userCartRef.get();
-    //     Map<String, dynamic> existingItems = snapshot.value != null
-    //         ? Map<String, dynamic>.from(snapshot.value as Map)
-    //         : {};
-    //
-    //     bool itemExists = false;
-    //     String cartItemId = '';
-    //
-    //     for (var entry in existingItems.entries) {
-    //       if (entry.value['itemId'] == widget.itemId) {
-    //         itemExists = true;
-    //         cartItemId = entry.key;
-    //         int existingQuantity = entry.value['quantity'];
-    //         int newQuantity = existingQuantity + quantity;
-    //
-    //         await userCartRef.child(cartItemId).update({'quantity': newQuantity});
-    //         ScaffoldMessenger.of(context).showSnackBar(
-    //           SnackBar(content: Text("Item quantity updated in cart!")),
-    //         );
-    //         break;
-    //       }
-    //     }
-    //
-    //     if (!itemExists) {
-    //       cartItemId = userCartRef.push().key.toString();
-    //       CartItem cartItem = CartItem(
-    //         adminId: widget.adminId,
-    //         itemId: widget.itemId,
-    //         name: widget.item_name,
-    //         imageUrl: widget.imageUrl,
-    //         category: widget.category,
-    //         rate: widget.rate,
-    //         description: widget.description,
-    //         quantity: quantity,
-    //         uid: userId,
-    //       );
-    //
-    //       await userCartRef.child(cartItemId).set(cartItem.toMap());
-    //       ScaffoldMessenger.of(context).showSnackBar(
-    //         SnackBar(content: Text("Item added to cart!")),
-    //       );
-    //     }
-    //
-    //     fetchCartItemCount(); // Update cart item count
-    //   } catch (error) {
-    //     ScaffoldMessenger.of(context).showSnackBar(
-    //       SnackBar(content: Text("Failed to add/update item in cart: $error")),
-    //     );
-    //   } finally {
-    //     _isAddingToCart = false; // Re-enable button
-    //   }
-    // }
 
 
     void addToCart() async {
@@ -205,6 +147,16 @@
         if (currentUser == null) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text("Please login to add items to the cart.")),
+          );
+          _isAddingToCart = false;
+          return;
+        }
+
+        // Check if enough quantity is available
+        int availableQty = int.parse(widget.item_qty);
+        if (quantity > availableQty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Not enough stock available")),
           );
           _isAddingToCart = false;
           return;
@@ -228,7 +180,22 @@
             int existingQuantity = entry.value['quantity'];
             int newQuantity = existingQuantity + quantity;
 
+            // Check if total requested exceeds available stock
+            if (newQuantity > availableQty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("Not enough stock available")),
+              );
+              _isAddingToCart = false;
+              return;
+            }
+
             await userCartRef.child(cartItemId).update({'quantity': newQuantity});
+
+            // Update the available stock in the database
+            await FirebaseDatabase.instance
+                .ref('items/${widget.itemId}')
+                .update({'item_qty': (availableQty - quantity).toString()});
+
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text("Item quantity updated in cart!")),
             );
@@ -244,19 +211,43 @@
             name: widget.item_name,
             imageUrl: widget.imageUrl,
             category: widget.category,
-            rate: widget.rate,
+            sale_rate: widget.net_rate,
+            ptc_code: widget.ptc_code,
+            barcode: widget.barcode,
             description: widget.description,
+            item_qty: widget.item_qty,
+            unit: widget.unit,
             quantity: quantity,
             uid: userId,
           );
 
           await userCartRef.child(cartItemId).set(cartItem.toMap());
+
+          // Update the available stock in the database
+          await FirebaseDatabase.instance
+              .ref('items/${widget.itemId}')
+              .update({'item_qty': (availableQty - quantity).toString()});
+
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text("Item added to cart!")),
           );
         }
 
-        fetchCartItemCount(); // Update cart item count
+        // Fetch the updated available stock from Firebase to refresh the UI
+        DatabaseReference itemRef = FirebaseDatabase.instance.ref('items/${widget.itemId}');
+        final updatedItemSnapshot = await itemRef.get();
+
+        if (updatedItemSnapshot.exists) {
+          String updatedQty = updatedItemSnapshot.child('item_qty').value.toString();
+
+          setState(() {
+            currentQty = int.parse(updatedQty); // Update currentQty with the latest stock value
+            quantity = 0;
+          });
+        }
+
+        // Refresh cart item count
+        await fetchCartItemCount();
       } catch (error) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Failed to add/update item in cart: $error")),
@@ -268,27 +259,6 @@
 
 
 
-    // Future<void> fetchCartItemCount() async {
-    //   if (currentUser != null) {
-    //     try {
-    //       String userId = currentUser!.uid;
-    //       final userCartRef = cartRef;
-    //       final snapshot = await userCartRef.child(userId).orderByChild('uid').equalTo(currentUser!.uid).once();
-    //       if (snapshot.snapshot.exists) {
-    //         final cartItems = Map<String, dynamic>.from(snapshot.snapshot.value as Map);
-    //         setState(() {
-    //           _cartItemCount = cartItems.length;
-    //         });
-    //       } else {
-    //         setState(() {
-    //           _cartItemCount = 0;
-    //         });
-    //       }
-    //     } catch (e) {
-    //       print('Error fetching cart item count: $e');
-    //     }
-    //   }
-    // }
 
     Future<void> fetchCartItemCount() async {
       if (currentUser != null) {
@@ -315,18 +285,30 @@
 
 
     void incrementQuantity() {
-      setState(() {
-        quantity++;
-      });
+      if (quantity < currentQty) { // Ensure quantity doesn't exceed available stock
+        setState(() {
+          quantity++;
+          currentQty--; // Decrease available quantity shown
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Not enough stock available")),
+        );
+      }
     }
 
     void decrementQuantity() {
-      setState(() {
-        if (quantity > 1) {
+      if (quantity > 1) { // Ensure quantity doesn't go below 1
+        setState(() {
           quantity--;
-        }
-      });
+          currentQty++; // Increase available quantity shown
+        });
+      }
     }
+
+
+
+
 
     @override
     Widget build(BuildContext context) {
@@ -404,10 +386,10 @@
                     fontWeight: FontWeight.bold,
                     ),
                   ),const SizedBox(height: 10),
-                  Text("Rs: ${widget.rate}",style: GoogleFonts.lora(
+                  Text("Rs: ${widget.net_rate}",style: GoogleFonts.lora(
                     fontSize: 25,
                     fontWeight: FontWeight.bold,
-                  ),
+                    ),
                   ),const SizedBox(height: 10),
                   Text("${widget.category} Item",style: GoogleFonts.lora(
                     fontSize: 25,
@@ -417,6 +399,13 @@
                     fontSize: 20,
                   ),
                   ),const SizedBox(height: 10),
+                  // Text("Available Quantity: ${widget.item_qty} ${widget.unit}",style: GoogleFonts.lora(
+                  //   fontSize: 20,
+                  // ),
+                  Text("Available Quantity: $currentQty ${widget.unit}", style: GoogleFonts.lora(
+                    fontSize: 20,
+                  )
+                  ), const SizedBox(height: 10),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -438,7 +427,8 @@
                   SizedBox(
                     width: 200,
                     child: ElevatedButton(
-                      onPressed: addToCart,
+                      // onPressed: addToCart,
+                      onPressed: quantity > 0 ? addToCart : null, // Disable if quantity is zero
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFe6b67e),
                         padding: const EdgeInsets.all(10),

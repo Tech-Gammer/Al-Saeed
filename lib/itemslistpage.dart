@@ -21,6 +21,7 @@ class _ItemListPageState extends State<ItemListPage> {
   String selectedCategory = 'All Items';
   bool _isLoading = true;
 
+
   @override
   void initState() {
     super.initState();
@@ -38,7 +39,9 @@ class _ItemListPageState extends State<ItemListPage> {
           allData[itemId] = {
             'item_name': itemDataSnapshot['item_name']?.toString() ?? 'No Name',
             'category': itemDataSnapshot['category']?.toString() ?? 'No Category',
-            'rate': itemDataSnapshot['rate']?.toString() ?? 'No Rate',
+            'net_rate': itemDataSnapshot['net_rate']?.toString() ?? 'No Rate',
+            'ptc_code': itemDataSnapshot['ptc_code']?.toString() ?? 'No ptc_code',
+            'barcode': itemDataSnapshot['barcode']?.toString() ?? 'No barcode',
             'description': itemDataSnapshot['description']?.toString() ?? 'No Description',
             'image': itemDataSnapshot['image']?.toString() ?? '',
           };
@@ -135,7 +138,11 @@ class _ItemListPageState extends State<ItemListPage> {
           final imageUrl = item['image'] as String?;
           final itemName = item['item_name'] as String? ?? 'No Name';
           final category = item['category'] as String? ?? 'No Category';
-          final rate = item['rate'] as String? ?? 'No Rate';
+          final net_rate = item['net_rate'] as String? ?? 'No Rate';
+          final ptc_code = item['ptc_code'] as String? ?? 'No ptc_code';
+          final item_qty = item['item_qty'] as String? ?? 'No qty';
+          final unit = item['unit'] as String? ?? 'No qty';
+          final barcode = item['barcode'] as String? ?? 'No barcode';
           final description = item['description'] as String? ?? 'No Description';
           final adminId = item['adminId'] as String? ?? 'adminId';
           final itemId = filteredData[index].key;
@@ -149,10 +156,14 @@ class _ItemListPageState extends State<ItemListPage> {
                   builder: (context) => ItemSelectPage(
                     imageUrl: imageUrl,
                     category: category,
-                    rate: rate,
+                    net_rate: net_rate,
+                    ptc_code: ptc_code,
+                    item_qty:item_qty,
+                    unit: unit,
                     description: description,
                     itemId: itemId,
                     item_name: itemName,
+                    barcode: barcode,
                     adminId: adminId,
 
                   ),
@@ -187,7 +198,7 @@ class _ItemListPageState extends State<ItemListPage> {
             //               builder: (context) => ItemSelectPage(
             //                 imageUrl: imageUrl,
             //                 category: category,
-            //                 rate: rate,
+            //                 sale_rate: sale_rate,
             //                 description: description,
             //                 itemId: itemId,
             //                 item_name: itemName,
@@ -250,7 +261,7 @@ class _ItemListPageState extends State<ItemListPage> {
                         ),
                       ),
                       Text(
-                        "Rs $rate",
+                        "Rs $net_rate",
                         style: GoogleFonts.lora(
                           textStyle: const TextStyle(fontSize: 16, color: Colors.brown),
                         ),
@@ -270,7 +281,11 @@ class _ItemListPageState extends State<ItemListPage> {
                             item_name: itemName,
                             imageUrl: imageUrl,
                             category: category,
-                            rate: rate,
+                            item_qty:item_qty,
+                            unit: unit,
+                            net_rate: net_rate,
+                            ptc_code: ptc_code,
+                            barcode: barcode,
                             description: description,
                             itemId: itemId,
                             adminId: adminId,

@@ -2,11 +2,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:myfirstmainproject/admin/additems.dart';
+import 'package:myfirstmainproject/admin/addunit.dart';
 import 'package:myfirstmainproject/admin/admin.dart';
 import 'package:myfirstmainproject/admin/loginpage.dart';
 import 'package:myfirstmainproject/admin/ordermanagement.dart';
 import 'package:myfirstmainproject/admin/showcategory.dart';
 import 'package:myfirstmainproject/admin/showslider.dart';
+import 'package:myfirstmainproject/admin/showunit.dart';
 import 'package:myfirstmainproject/admin/superadminpanel.dart';
 import 'package:myfirstmainproject/homepage.dart';
 import '../components.dart';
@@ -206,6 +208,23 @@ class _DrawerContentState extends State<DrawerContent> {
             title: const Text("SHOW SLDIER IMAGES",style: CustomTextStyles.customTextStyle),
             onTap: (){
               Navigator.push(context, MaterialPageRoute(builder: (context)=>const SliderImages()));
+            },
+          ),const Divider(
+            color: Colors.grey,
+          ),ListTile(
+            leading: const Icon(Icons.add),
+            title: const Text("ADD UNITS",style: CustomTextStyles.customTextStyle),
+            onTap: (){
+              Navigator.push(context, MaterialPageRoute(builder: (context)=>const Addunit()));
+            },
+          ),const Divider(
+            color: Colors.grey,
+          ),
+          ListTile(
+            leading: const Icon(Icons.image_outlined),
+            title: const Text("SHOW UNITS",style: CustomTextStyles.customTextStyle),
+            onTap: (){
+              Navigator.push(context, MaterialPageRoute(builder: (context)=>const ShowUnit()));
             },
           ),const Divider(
             color: Colors.grey,

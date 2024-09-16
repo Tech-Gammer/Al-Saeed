@@ -17,8 +17,12 @@ class _ItemsPageState extends State<ItemsPage> {
   final FirebaseStorage storage = FirebaseStorage.instance;
   final ImagePicker picker = ImagePicker();
   List<String> categories = [];
+  List<String> units = [];
+
   List<Map<dynamic, dynamic>> _items = [];
   String? selectedCategory;
+  String? selectedUnit;
+
   TextEditingController categoryController = TextEditingController();
   File? _imageFile;
 
@@ -26,6 +30,7 @@ class _ItemsPageState extends State<ItemsPage> {
   void initState() {
     super.initState();
     fetchCategories();
+    fetchUnits();
   }
 
   Future<List<Map<String, dynamic>>> fetchItems() async {
@@ -59,6 +64,29 @@ class _ItemsPageState extends State<ItemsPage> {
       } else {
         setState(() {
           categories = [];
+        });
+      }
+    } catch (e) {
+      // print('Error fetching categories: $e');
+    }
+  }
+
+  Future<void> fetchUnits() async {
+    try {
+      final unitRef = FirebaseDatabase.instance.ref("unit");
+      final snapshot = await unitRef.once();
+
+      if (snapshot.snapshot.value != null) {
+        final data = Map<String, dynamic>.from(snapshot.snapshot.value as Map);
+        List<String> fetchedUnits = data.values.map((value) => value['name'].toString()).toList();
+
+        setState(() {
+          units = fetchedUnits;
+          if (units.isNotEmpty) selectedUnit = units.first;
+        });
+      } else {
+        setState(() {
+          units = [];
         });
       }
     } catch (e) {
@@ -101,14 +129,204 @@ class _ItemsPageState extends State<ItemsPage> {
     }
   }
 
+  // void _showItemDetailsDialog(Map<String, dynamic> item)  {
+  //   final TextEditingController nameController = TextEditingController(text: item['item_name'] ?? '');
+  //   final TextEditingController netController = TextEditingController(text: (item['net_rate'] ?? 0.0).toString());
+  //   final TextEditingController descriptionController = TextEditingController(text: item['description'] ?? '');
+  //   final TextEditingController purchasseController = TextEditingController(text: item['purchase_rate'] ?? '');
+  //   final TextEditingController saleController = TextEditingController(text: item['sale_rate'] ?? '');
+  //   final TextEditingController taxController = TextEditingController(text: item['tax'] ?? '');
+  //   final TextEditingController barcodeController = TextEditingController(text: item['barcode'] ?? '');
+  //   final TextEditingController ptcController = TextEditingController(text: item['ptc_code'] ?? '');
+  //   final TextEditingController item_qtyController = TextEditingController(text: item['item_qty'] ?? '');
+  //
+  //
+  //   String currentCategory = item['category'] ?? '';
+  //   String currentUnit = item['unit'] ?? '';
+  //
+  //   String? imageUrl = item['image'];
+  //
+  //   double saleRate = double.tryParse(item['sale_rate'] ?? '0.0') ?? 0.0;
+  //   double tax = double.tryParse(item['tax'] ?? '0.0') ?? 0.0;
+  //   double netRate = saleRate * (1 + tax / 100);
+  //
+  //   void _updateNetRate() {
+  //     final saleRate = double.tryParse(saleController.text) ?? 0.0;
+  //     final tax = double.tryParse(taxController.text) ?? 0.0;
+  //     final netRate = saleRate * (1 + tax / 100);
+  //     netController.text = netRate.toStringAsFixed(0);
+  //   }
+  //
+  //   saleController.addListener(_updateNetRate);
+  //   taxController.addListener(_updateNetRate);
+  //
+  //
+  //   showDialog(
+  //     context: context,
+  //     builder: (context) {
+  //       return AlertDialog(
+  //         title: Row(
+  //           children: [
+  //             const Text("Item Details"),
+  //             const Spacer(),
+  //             IconButton(onPressed: (){
+  //               Navigator.pop(context);
+  //             }, icon: const Icon(Icons.close))
+  //           ],
+  //         ),
+  //         content: SingleChildScrollView(
+  //           child: Column(
+  //             crossAxisAlignment: CrossAxisAlignment.start,
+  //             children: [
+  //               Center(
+  //                 child: Stack(
+  //                   clipBehavior: Clip.none,
+  //                   children: [
+  //                     CircleAvatar(
+  //                       radius: 70,
+  //                       backgroundImage: item['image'] != null
+  //                             ? NetworkImage(item['image'])
+  //                             : null,
+  //                       backgroundColor: Colors.grey[200],
+  //                       child: _imageFile == null && imageUrl == null
+  //                           ? const Icon(Icons.image, color: Colors.grey)
+  //                           : null,
+  //                     ),
+  //                     Positioned(
+  //                       bottom: -5,
+  //                       right: -5,
+  //                       child: IconButton(
+  //                         icon: const Icon(Icons.camera_alt, color: Colors.blue, size: 30),
+  //                         onPressed: _pickImage,
+  //                       ),
+  //                     ),
+  //                   ],
+  //                 ),
+  //             ),
+  //               const SizedBox(height: 20),
+  //               _buildTextField(nameController, "Item Name"),
+  //               TextField(
+  //                 controller: TextEditingController(text: netRate.toStringAsFixed(0)),
+  //                 decoration: InputDecoration(
+  //                   labelText: "Net Rate",
+  //                   border: const OutlineInputBorder(
+  //                     borderSide: BorderSide(color: Colors.grey, width: 5),
+  //                   ),
+  //                 ),
+  //                 keyboardType: TextInputType.number,
+  //                 readOnly: true, // Make net rate field read-only
+  //               ),
+  //               // _buildTextField(netController, "Net Rate", keyboardType: TextInputType.number),
+  //               _buildTextField(purchasseController, "Purchase Rate", keyboardType: TextInputType.number),
+  //               _buildTextField(saleController, "Sale Rate", keyboardType: TextInputType.number),
+  //               _buildTextField(taxController, "Tax", keyboardType: TextInputType.number),
+  //               _buildTextField(barcodeController, "Barcode", keyboardType: TextInputType.number),
+  //               _buildTextField(ptcController, "PCT CODE", keyboardType: TextInputType.number),
+  //               _buildTextField(item_qtyController, "Item Quantity", keyboardType: TextInputType.number),
+  //
+  //               _buildCategoryDropdown(currentCategory),
+  //               _buildUnitDropdown(currentUnit),
+  //               _buildTextField(descriptionController, "Description", maxLines: 3),
+  //             ],
+  //           ),
+  //         ),
+  //         actions: [
+  //           Center(
+  //             child: Container(
+  //               width: 200,
+  //               height: 50,
+  //               decoration: const BoxDecoration(
+  //                 color: Color(0xFFE0A45E),
+  //                 borderRadius: BorderRadius.all(Radius.circular(20))
+  //               ),
+  //               child: TextButton(
+  //                 onPressed: () async {
+  //                   final itemId = item['itemId'] as String? ?? '';
+  //                   final newPrice = double.tryParse(netController.text) ?? 0.0;
+  //
+  //                   if (itemId.isNotEmpty) {
+  //                     String? newImageUrl;
+  //                     if (_imageFile != null) {
+  //                       newImageUrl = await _uploadImage(_imageFile!, imageUrl);
+  //                     } else {
+  //                       newImageUrl = imageUrl; // Keep the old image URL if no new image is selected
+  //                     }
+  //
+  //                     // await _updateItem(itemId, {
+  //                     //   'item_name': nameController.text,
+  //                     //   'net_rate': newPrice,
+  //                     //   'category': selectedCategory ?? currentCategory,
+  //                     //   'unit': selectedUnit ?? currentUnit,
+  //                     //   'description': descriptionController.text,
+  //                     //   'image': newImageUrl,
+  //                     //   'sale_rate': saleController,
+  //                     //   'purchase-rate': purchasseController,
+  //                     //   'tax': taxController,
+  //                     //   'barcode': barcodeController,
+  //                     //
+  //                     // });
+  //                     await _updateItem(itemId, {
+  //                       'item_name': nameController.text,
+  //                       'net_rate': newPrice,
+  //                       'category': selectedCategory ?? currentCategory,
+  //                       'unit': selectedUnit ?? currentUnit,
+  //                       'description': descriptionController.text,
+  //                       'image': newImageUrl,
+  //                       'sale_rate': saleController.text,
+  //                       'purchase_rate': purchasseController.text,
+  //                       'tax': taxController.text,
+  //                       'barcode': barcodeController.text,
+  //                       'ptc_code': ptcController.text,
+  //                       'item_qty': item_qtyController.text
+  //                     });
+  //
+  //                     Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ItemsPage()));
+  //                   } else {
+  //                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Invalid item ID")));
+  //                   }
+  //                 },
+  //
+  //                 child: const Text("Update Item",style: NewCustomTextStyles.newcustomTextStyle),
+  //               ),
+  //             ),
+  //           ),
+  //         ],
+  //       );
+  //     },
+  //   );
+  // }
 
 
   void _showItemDetailsDialog(Map<String, dynamic> item) {
     final TextEditingController nameController = TextEditingController(text: item['item_name'] ?? '');
-    final TextEditingController priceController = TextEditingController(text: (item['rate'] ?? 0.0).toString());
+    final TextEditingController netController = TextEditingController(text: (item['net_rate'] ?? 0.0).toString());
     final TextEditingController descriptionController = TextEditingController(text: item['description'] ?? '');
-    String currentCategory = item['category'] ?? '';
+    final TextEditingController purchaseController = TextEditingController(text: item['purchase_rate'] ?? '');
+    final TextEditingController saleController = TextEditingController(text: item['sale_rate'] ?? '');
+    final TextEditingController taxController = TextEditingController(text: item['tax'] ?? '');
+    final TextEditingController barcodeController = TextEditingController(text: item['barcode'] ?? '');
+    final TextEditingController ptcController = TextEditingController(text: item['ptc_code'] ?? '');
+    final TextEditingController itemQtyController = TextEditingController(text: item['item_qty'] ?? '');
+
+    // Initialize with current category and unit from item
+    String currentCategory = item['category'] ?? categories.first;
+    String currentUnit = item['unit'] ?? units.first;
+
     String? imageUrl = item['image'];
+
+    double saleRate = double.tryParse(item['sale_rate'] ?? '0.0') ?? 0.0;
+    double tax = double.tryParse(item['tax'] ?? '0.0') ?? 0.0;
+    double netRate = saleRate * (1 + tax / 100);
+
+    void _updateNetRate() {
+      final saleRate = double.tryParse(saleController.text) ?? 0.0;
+      final tax = double.tryParse(taxController.text) ?? 0.0;
+      final netRate = saleRate * (1 + tax / 100);
+      netController.text = netRate.toStringAsFixed(0);
+    }
+
+    saleController.addListener(_updateNetRate);
+    taxController.addListener(_updateNetRate);
 
     showDialog(
       context: context,
@@ -118,9 +336,12 @@ class _ItemsPageState extends State<ItemsPage> {
             children: [
               const Text("Item Details"),
               const Spacer(),
-              IconButton(onPressed: (){
-                Navigator.pop(context);
-              }, icon: const Icon(Icons.close))
+              IconButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                icon: const Icon(Icons.close),
+              ),
             ],
           ),
           content: SingleChildScrollView(
@@ -133,13 +354,9 @@ class _ItemsPageState extends State<ItemsPage> {
                     children: [
                       CircleAvatar(
                         radius: 70,
-                        backgroundImage: item['image'] != null
-                              ? NetworkImage(item['image'])
-                              : null,
+                        backgroundImage: item['image'] != null ? NetworkImage(item['image']) : null,
                         backgroundColor: Colors.grey[200],
-                        child: _imageFile == null && imageUrl == null
-                            ? const Icon(Icons.image, color: Colors.grey)
-                            : null,
+                        child: _imageFile == null && imageUrl == null ? const Icon(Icons.image, color: Colors.grey) : null,
                       ),
                       Positioned(
                         bottom: -5,
@@ -151,11 +368,33 @@ class _ItemsPageState extends State<ItemsPage> {
                       ),
                     ],
                   ),
-              ),
+                ),
                 const SizedBox(height: 20),
                 _buildTextField(nameController, "Item Name"),
-                _buildTextField(priceController, "Price", keyboardType: TextInputType.number),
+                TextField(
+                  controller: TextEditingController(text: netRate.toStringAsFixed(0)),
+                  decoration: const InputDecoration(
+                    labelText: "Net Rate",
+                    border: OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.grey, width: 5),
+                    ),
+                  ),
+                  keyboardType: TextInputType.number,
+                  readOnly: true, // Make net rate field read-only
+                ),
+                _buildTextField(purchaseController, "Purchase Rate", keyboardType: TextInputType.number),
+                _buildTextField(saleController, "Sale Rate", keyboardType: TextInputType.number),
+                _buildTextField(taxController, "Tax", keyboardType: TextInputType.number),
+                _buildTextField(barcodeController, "Barcode", keyboardType: TextInputType.number),
+                _buildTextField(ptcController, "PCT CODE", keyboardType: TextInputType.number),
+                _buildTextField(itemQtyController, "Item Quantity", keyboardType: TextInputType.number),
+
+                // Dropdown for selecting category, initialized with currentCategory
                 _buildCategoryDropdown(currentCategory),
+
+                // Dropdown for selecting unit, initialized with currentUnit
+                _buildUnitDropdown(currentUnit),
+
                 _buildTextField(descriptionController, "Description", maxLines: 3),
               ],
             ),
@@ -167,12 +406,12 @@ class _ItemsPageState extends State<ItemsPage> {
                 height: 50,
                 decoration: const BoxDecoration(
                   color: Color(0xFFE0A45E),
-                  borderRadius: BorderRadius.all(Radius.circular(20))
+                  borderRadius: BorderRadius.all(Radius.circular(20)),
                 ),
                 child: TextButton(
                   onPressed: () async {
                     final itemId = item['itemId'] as String? ?? '';
-                    final newPrice = double.tryParse(priceController.text) ?? 0.0;
+                    final newPrice = double.tryParse(netController.text) ?? 0.0;
 
                     if (itemId.isNotEmpty) {
                       String? newImageUrl;
@@ -184,18 +423,25 @@ class _ItemsPageState extends State<ItemsPage> {
 
                       await _updateItem(itemId, {
                         'item_name': nameController.text,
-                        'rate': newPrice,
+                        'net_rate': newPrice,
                         'category': selectedCategory ?? currentCategory,
+                        'unit': selectedUnit ?? currentUnit,
                         'description': descriptionController.text,
                         'image': newImageUrl,
+                        'sale_rate': saleController.text,
+                        'purchase_rate': purchaseController.text,
+                        'tax': taxController.text,
+                        'barcode': barcodeController.text,
+                        'ptc_code': ptcController.text,
+                        'item_qty': itemQtyController.text,
                       });
+
                       Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ItemsPage()));
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Invalid item ID")));
                     }
                   },
-
-                  child: const Text("Update Item",style: NewCustomTextStyles.newcustomTextStyle),
+                  child: const Text("Update Item", style: NewCustomTextStyles.newcustomTextStyle),
                 ),
               ),
             ),
@@ -207,19 +453,15 @@ class _ItemsPageState extends State<ItemsPage> {
 
   Future<void> _updateItem(String itemId, Map<String, dynamic> updatedData) async {
     try {
-      // String adminId = FirebaseAuth.instance.currentUser!.uid;
       final itemRef = itemsRef.child(itemId);
-
-      // print("Updating item at path: ${itemRef.path}");
-      // print("Update data: $updatedData");
 
       await itemRef.update(updatedData);
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Item updated successfully")));
     } catch (e) {
-      // print('Error updating item: $e');
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Error updating item")));
     }
   }
+
 
   Future<void> deleteItem(String itemId, String imageUrl) async {
     try {
@@ -289,6 +531,36 @@ class _ItemsPageState extends State<ItemsPage> {
     );
   }
 
+  Widget _buildUnitDropdown(String currentUnit) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: DropdownButtonFormField<String>(
+        value: selectedUnit ?? currentUnit,
+        decoration: const InputDecoration(
+            labelText: "Unit",
+            border: OutlineInputBorder(
+                borderSide: BorderSide(
+                    color: Colors.grey,
+                    width: 5
+                )
+            )
+        ),
+        items: units.map((unit) {
+          return DropdownMenuItem<String>(
+            value: unit,
+            child: Text(unit),
+          );
+        }).toList(),
+        onChanged: (newValue) {
+          setState(() {
+            selectedUnit = newValue!;
+          });
+        },
+      ),
+    );
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -330,7 +602,7 @@ class _ItemsPageState extends State<ItemsPage> {
                       children: [
                         Text("Description: ${item['description']}"),
                         const SizedBox(height: 4),
-                        Text("Rate: ${item['rate']}"),
+                        Text("Rate: ${item['net_rate']}"),
                         const SizedBox(height: 4),
                         Text("Category: ${item['category']}"),
                       ],

@@ -3,6 +3,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:myfirstmainproject/admin/drawer.dart';
 import 'package:myfirstmainproject/admin/itemslistpage.dart';
+import 'package:myfirstmainproject/POS/pos_panel.dart';
 import 'package:myfirstmainproject/admin/reportpage.dart';
 import 'package:myfirstmainproject/admin/showcategory.dart';
 import 'loginpage.dart';
@@ -225,10 +226,22 @@ class _AdminState extends State<Admin> {
                   DashboardCard(
                     title: "Reports",
                     icon: Icons.report,
-                     count: deliveredOrders.toString(),
+                      count: deliveredOrders.toString(),
                     onTap: () {
                       Navigator.push(context, MaterialPageRoute(builder: (context) => ReportSummaryPage()
                       ),
+                      );
+                    },
+                  ),
+                  DashboardCard(
+                    title: "POS",
+                    icon: Icons.point_of_sale_outlined,
+                    count: deliveredOrders.toString(),
+                    onTap: () {
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(builder: (context) => const POSPage()),
+                            (Route<dynamic> route) => false, // This removes all previous routes
                       );
                     },
                   ),
@@ -261,7 +274,7 @@ class DashboardCard extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 50, color: Colors.blue),
+            Icon(icon, size: 50, color: Color(0xFFe6b67e)),
             const SizedBox(height: 10),
             Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
             const SizedBox(height: 10),
